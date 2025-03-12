@@ -70,7 +70,7 @@ function setup() {
     helpModal = createDiv(`
       <div style="background-color: #000; color: #fff; padding: 40px; border-radius: 10px; text-align: left; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 18px; font-weight: normal; width: 400px; position: relative;">
         <h3 style="margin: 0 0 20px 0; color: #fff; font-weight: normal;">Controls</h3>
-        <p style="font-weight: normal; margin: 0;">A - Draw in Black<br>Up Arrow - Increase Thickness<br>Down Arrow - Decrease Thickness<br>S - Save Canvas<br>R - Reset Canvas<br>Esc - Return to Title</p>
+        <p style="font-weight: normal; margin: 0;">A - Hold to draw in black<br>↑ - Increase thickness<br>↓ - Decrease thickness<br>S - Save canvas as .PNG<br>R - Reset canvas<br>Esc - Return to title</p>
         <button id="closeModal" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #fff; font-family: 'Material Symbols Outlined'; font-size: 30px; cursor: pointer;">close</button>
       </div>
     `)
@@ -176,7 +176,7 @@ function setupStartScreen() {
     setTimeout(() => {
       if (startScreen) {
         drip = { 
-          x: title.elt.offsetLeft + title.elt.offsetWidth * (mobileMode ? 0.40 : 0.35), // Slightly right on mobile
+          x: title.elt.offsetLeft + title.elt.offsetWidth * (mobileMode ? 0.36 : 0.35), // Slightly right on mobile
           y: title.elt.offsetTop + title.elt.offsetHeight * 0.2,
           targetY: height, 
           startTime: millis(), 
