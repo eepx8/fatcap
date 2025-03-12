@@ -27,6 +27,24 @@
       touch-action: manipulation; /* Prevents pinch-zoom and double-tap zoom on modern browsers */
     }
   </style>
+  <style>
+    body {
+      touch-action: manipulation;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      user-select: none; /* Standard */
+      -webkit-user-select: none; /* Safari */
+      -moz-user-select: none; /* Firefox */
+      -ms-user-select: none; /* IE/Edge */
+    }
+    * {
+      user-select: none; /* Apply to all elements */
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+    }
+  </style>
   <title>Px8 - FATCAP</title>
   <!-- Link to the p5.js library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>

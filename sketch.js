@@ -3,7 +3,7 @@ let colors, noiseOffset = 0, isDrawingBlack = false;
 let mobileMode = false;
 let controls = [];
 let startScreen = true;
-let title, subtitle, goButton, helpButton, helpModal;
+let title, subtitle, goButton, helpButton, helpModal, overlay;
 let startScreenColor;
 let thicknessMeter = { visible: false, timer: 0, duration: 1000 };
 let colorMeter = { visible: false, timer: 0, duration: 1000 };
@@ -28,10 +28,15 @@ function setup() {
   select('canvas').style('top', '0');
   select('canvas').style('left', '0');
 
+  document.body.style.userSelect = 'none';
+  document.body.style.webkitUserSelect = 'none';
+  document.body.style.mozUserSelect = 'none';
+  document.body.style.msUserSelect = 'none';
+
   setupStartScreen();
 
   if (!mobileMode) {
-    helpButton = createButton('help')
+    helpButton = createButton('<span class="icon">help</span>')
       .position(width - 70, 10)
       .size(60, 60)
       .style('background-color', '#000')
@@ -42,14 +47,31 @@ function setup() {
       .style('font-size', '24px')
       .style('z-index', '1000')
       .style('display', 'none')
-      .style('transition', 'opacity 0.2s ease') // Added for fade
+      .style('display', 'flex')
+      .style('align-items', 'center')
+      .style('justify-content', 'center')
       .mousePressed(toggleHelpModal);
 
+    let iconSpan = select('.icon', helpButton);
+    iconSpan.style('transition', 'opacity 0.2s ease');
+
+    overlay = createDiv('')
+      .style('position', 'fixed')
+      .style('top', '0')
+      .style('left', '0')
+      .style('width', '100%')
+      .style('height', '100%')
+      .style('background-color', 'rgba(0, 0, 0, 0.5)')
+      .style('z-index', '900')
+      .style('display', 'none')
+      .style('opacity', '0')
+      .style('transition', 'opacity 0.3s ease');
+
     helpModal = createDiv(`
-      <div style="background-color: #000; color: #fff; padding: 30px; border-radius: 10px; text-align: left; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 18px; font-weight: normal; width: 300px;">
-        <h3 style="margin-top: 0; color: #fff; font-weight: normal;">Controls</h3>
-        <p style="font-weight: normal;">A - Draw in Black<br>Up Arrow - Increase Thickness<br>Down Arrow - Decrease Thickness<br>S - Save Canvas<br>R - Reset Canvas<br>Esc - Return to Title</p>
-        <button id="closeModal" style="background-color: #fff; color: #000; border: none; border-radius: 5px; padding: 8px 16px; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: normal;">Close</button>
+      <div style="background-color: #000; color: #fff; padding: 40px; border-radius: 10px; text-align: left; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 18px; font-weight: normal; width: 400px; position: relative;">
+        <h3 style="margin: 0 0 20px 0; color: #fff; font-weight: normal;">Controls</h3>
+        <p style="font-weight: normal; margin: 0;">A - Draw in Black<br>Up Arrow - Increase Thickness<br>Down Arrow - Decrease Thickness<br>S - Save Canvas<br>R - Reset Canvas<br>Esc - Return to Title</p>
+        <button id="closeModal" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #fff; font-family: 'Material Symbols Outlined'; font-size: 30px; cursor: pointer;">close</button>
       </div>
     `)
       .style('position', 'absolute')
@@ -106,8 +128,8 @@ function setupStartScreen() {
     .style('font-size', mobileMode ? '13rem' : '40rem')
     .style('text-align', 'center')
     .style('color', '#333')
-    .style('font-family', "'Six Caps', sans-serif") // Reverted to Six Caps
-    .style('font-weight', 'bold') // Bold (though Six Caps has no bold, for clarity)
+    .style('font-family', "'Six Caps', sans-serif")
+    .style('font-weight', 'bold')
     .style('-webkit-text-stroke', '0')
     .style('text-stroke', '0')
     .style('position', 'absolute')
@@ -120,12 +142,12 @@ function setupStartScreen() {
     .style('z-index', '10')
     .style('display', 'none');
 
-  goButton = createButton('Start')
+  goButton = createButton('START')
     .style('position', 'absolute')
     .style('left', '50%')
     .style('top', mobileMode ? '75%' : '80%')
     .style('transform', 'translateX(-50%)')
-    .style('background-color', '#000')
+    .style('background-color', '#333')
     .style('color', '#fff')
     .style('border', 'none')
     .style('border-radius', '20px')
@@ -154,8 +176,8 @@ function setupStartScreen() {
     setTimeout(() => {
       if (startScreen) {
         drip = { 
-          x: title.elt.offsetLeft + title.elt.offsetWidth * 0.35, // Approx "P" position
-          y: title.elt.offsetTop + title.elt.offsetHeight * 0.2, // Much higher (20% from top of "P")
+          x: title.elt.offsetLeft + title.elt.offsetWidth * (mobileMode ? 0.40 : 0.35), // Slightly right on mobile
+          y: title.elt.offsetTop + title.elt.offsetHeight * 0.2,
           targetY: height, 
           startTime: millis(), 
           thickness: mobileMode ? 10 : 20, 
@@ -260,7 +282,7 @@ function fadeOutStartScreen() {
         .style('align-items', 'center')
         .style('justify-content', 'center'));
     } else {
-      helpButton.style('display', 'block');
+      helpButton.style('display', 'block'); // Only show after title screen fades
     }
   }, 300);
 }
@@ -284,7 +306,9 @@ function resetToStartScreen() {
   if (!mobileMode) {
     helpButton.style('display', 'none');
     helpModal.style('display', 'none');
+    overlay.style('display', 'none');
     helpModal.style('opacity', '0');
+    overlay.style('opacity', '0');
   }
 
   startScreenColor = colors[floor(random(colors.length))];
@@ -295,33 +319,47 @@ function resetToStartScreen() {
 }
 
 function toggleHelpModal() {
+  let iconSpan = select('.icon', helpButton);
   if (helpModal.style('display') === 'none') {
-    helpButton.style('opacity', '0');
+    iconSpan.style('opacity', '0');
     setTimeout(() => {
-      helpButton.html('cancel');
-      helpButton.style('opacity', '1');
-    }, 200); // Fade duration matches transition
+      iconSpan.html('cancel');
+      iconSpan.style('opacity', '1');
+    }, 200);
+    overlay.style('display', 'block');
     helpModal.style('display', 'block');
-    setTimeout(() => helpModal.style('opacity', '1'), 10);
-  } else {
-    helpButton.style('opacity', '0');
     setTimeout(() => {
-      helpButton.html('help');
-      helpButton.style('opacity', '1');
+      overlay.style('opacity', '1');
+      helpModal.style('opacity', '1');
+    }, 10);
+  } else {
+    iconSpan.style('opacity', '0');
+    setTimeout(() => {
+      iconSpan.html('help');
+      iconSpan.style('opacity', '1');
     }, 200);
     helpModal.style('opacity', '0');
-    setTimeout(() => helpModal.style('display', 'none'), 300);
+    overlay.style('opacity', '0');
+    setTimeout(() => {
+      helpModal.style('display', 'none');
+      overlay.style('display', 'none');
+    }, 300);
   }
 }
 
 function closeHelpModal() {
-  helpButton.style('opacity', '0');
+  let iconSpan = select('.icon', helpButton);
+  iconSpan.style('opacity', '0');
   setTimeout(() => {
-    helpButton.html('help');
-    helpButton.style('opacity', '1');
+    iconSpan.html('help');
+    iconSpan.style('opacity', '1');
   }, 200);
   helpModal.style('opacity', '0');
-  setTimeout(() => helpModal.style('display', 'none'), 300);
+  overlay.style('opacity', '0');
+  setTimeout(() => {
+    helpModal.style('display', 'none');
+    overlay.style('display', 'none');
+  }, 300);
 }
 
 function draw() {
@@ -407,8 +445,9 @@ function mouseReleased() {
 
   currentSpline.points.forEach((pt, i, arr) => {
     if (i < arr.length - 1 && dist(pt.x, pt.y, arr[i + 1].x, arr[i + 1].y) > 1) {
-      if (random() < 0.1) {
-        let thickness = random(10, 30);
+      let dripChance = isDrawingBlack ? 0.05 : 0.1;
+      if (random() < dripChance) {
+        let thickness = random(10, 30); // Reverted to original thickness
         let targetY = min(pt.y + random(mobileMode ? 100 : 200, mobileMode ? 300 : 500), height);
         currentSpline.verticalLines.push({ x: pt.x, y: pt.y, targetY, startTime: millis(), thickness, delay: random(500, 2000) });
       }
