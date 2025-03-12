@@ -77,7 +77,7 @@ function setupStartScreen() {
     .style('font-family', 'Poppins, sans-serif')
     .style('position', 'absolute')
     .style('left', '50%')
-    .style('top', mobileMode ? '32%' : '20%')
+    .style('top', mobileMode ? '5%' : '20%') // Moved closer to top on mobile
     .style('transform', 'translateX(-50%)')
     .style('opacity', '0')
     .style('transition', 'opacity 0.5s ease-in')
@@ -85,7 +85,7 @@ function setupStartScreen() {
     .style('display', 'none');
 
   title = createElement('h1', 'FATCAP')
-    .style('font-size', mobileMode ? '15rem' : '40rem') // Reduced to 15rem on mobile
+    .style('font-size', mobileMode ? '13rem' : '40rem') // Reduced to 13rem on mobile
     .style('text-align', 'center')
     .style('color', '#333')
     .style('font-family', 'Six Caps, sans-serif')
@@ -102,7 +102,7 @@ function setupStartScreen() {
   goButton = createButton('Start')
     .style('position', 'absolute')
     .style('left', '50%')
-    .style('top', mobileMode ? '70%' : '80%')
+    .style('top', mobileMode ? '75%' : '80%') // Moved slightly lower on mobile
     .style('transform', 'translateX(-50%)')
     .style('background-color', '#000')
     .style('color', '#fff')
@@ -150,7 +150,7 @@ function fadeOutStartScreen() {
       let buttonSize = 60;
       let totalWidth = buttonSize * 5 + 10 * 4;
       let startX = (width - totalWidth) / 2;
-      let buttonY = height - 100;
+      let buttonY = height - 70; // Moved closer to bottom (was height - 100)
 
       controls.push(createButton('+')
         .mousePressed(() => { baseThickness += 20; showThicknessMeter(); })
@@ -287,9 +287,9 @@ function draw() {
   background(255);
 
   if (isRewinding) {
-    let totalPoints = 0;
-    splines.forEach(spline => totalPoints += spline.points.length);
-    let adjustedSpeed = rewindSpeed * (200 / max(1, totalPoints));
+    let totalWidth = 0;
+    splines.forEach(spline => totalWidth += spline.points.length);
+    let adjustedSpeed = rewindSpeed * (200 / max(1, totalWidth));
     rewindProgress += adjustedSpeed;
     if (rewindProgress >= 1) {
       isRewinding = false;
