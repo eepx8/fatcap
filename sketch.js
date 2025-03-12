@@ -56,10 +56,20 @@ function setup() {
 
     select('#closeModal', helpModal).mousePressed(closeHelpModal);
   }
+
+  // Prevent double-tap zoom on mobile
+  document.addEventListener('touchstart', function(event) {
+    if (event.touches.length > 1) {
+      event.preventDefault();
+    }
+  }, { passive: false });
+
+  document.addEventListener('doubletap', function(event) {
+    event.preventDefault();
+  }, { passive: false });
 }
 
 function setupStartScreen() {
-  // Create elements initially hidden with display: none
   subtitle = createElement('h2', "Px8 Studio's")
     .style('font-size', '1.1rem')
     .style('text-align', 'center')
@@ -72,10 +82,10 @@ function setupStartScreen() {
     .style('opacity', '0')
     .style('transition', 'opacity 0.5s ease-in')
     .style('z-index', '10')
-    .style('display', 'none'); // Initially invisible
+    .style('display', 'none');
 
   title = createElement('h1', 'FATCAP')
-    .style('font-size', mobileMode ? '20rem' : '40rem')
+    .style('font-size', mobileMode ? '15rem' : '40rem') // Reduced to 15rem on mobile
     .style('text-align', 'center')
     .style('color', '#333')
     .style('font-family', 'Six Caps, sans-serif')
@@ -106,10 +116,9 @@ function setupStartScreen() {
     .size(80, 40)
     .mousePressed(fadeOutStartScreen);
 
-  // Staggered fade-in: Show elements and fade from 0 to 1
   setTimeout(() => {
     subtitle.style('display', 'block');
-    setTimeout(() => subtitle.style('opacity', '1'), 10); // Small delay to trigger transition
+    setTimeout(() => subtitle.style('opacity', '1'), 10);
   }, 100); // h2 starts at 100ms
 
   setTimeout(() => {
@@ -151,7 +160,10 @@ function fadeOutStartScreen() {
         .style('color', '#fff')
         .style('border', 'none')
         .style('border-radius', '50%')
-        .style('font-size', '24px'));
+        .style('font-size', '24px')
+        .style('display', 'flex')
+        .style('align-items', 'center')
+        .style('justify-content', 'center'));
 
       controls.push(createButton('-')
         .mousePressed(() => { baseThickness = max(20, baseThickness - 20); showThicknessMeter(); })
@@ -161,7 +173,10 @@ function fadeOutStartScreen() {
         .style('color', '#fff')
         .style('border', 'none')
         .style('border-radius', '50%')
-        .style('font-size', '24px'));
+        .style('font-size', '24px')
+        .style('display', 'flex')
+        .style('align-items', 'center')
+        .style('justify-content', 'center'));
 
       controls.push(createButton('invert_colors')
         .mousePressed(() => { isDrawingBlack = !isDrawingBlack; showColorMeter(); })
@@ -172,7 +187,10 @@ function fadeOutStartScreen() {
         .style('border', 'none')
         .style('border-radius', '50%')
         .style('font-family', 'Material Symbols Outlined')
-        .style('font-size', '24px'));
+        .style('font-size', '24px')
+        .style('display', 'flex')
+        .style('align-items', 'center')
+        .style('justify-content', 'center'));
 
       controls.push(createButton('restart_alt')
         .mousePressed(() => { if (splines.length > 0) { isRewinding = true; rewindProgress = 0; }})
@@ -183,7 +201,10 @@ function fadeOutStartScreen() {
         .style('border', 'none')
         .style('border-radius', '50%')
         .style('font-family', 'Material Symbols Outlined')
-        .style('font-size', '24px'));
+        .style('font-size', '24px')
+        .style('display', 'flex')
+        .style('align-items', 'center')
+        .style('justify-content', 'center'));
 
       controls.push(createButton('save')
         .mousePressed(() => {
@@ -199,7 +220,10 @@ function fadeOutStartScreen() {
         .style('border', 'none')
         .style('border-radius', '50%')
         .style('font-family', 'Material Symbols Outlined')
-        .style('font-size', '24px'));
+        .style('font-size', '24px')
+        .style('display', 'flex')
+        .style('align-items', 'center')
+        .style('justify-content', 'center'));
     } else {
       helpButton.style('display', 'block');
     }
