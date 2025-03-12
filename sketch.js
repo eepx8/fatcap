@@ -71,7 +71,7 @@ function setup() {
 
     helpModal = createDiv(`
       <div style="background-color: #161616; color: #fff; padding: 40px; border-radius: 10px; text-align: left; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 18px; font-weight: normal; width: 400px; position: relative;">
-        <h3 style="margin: 0 0 20px 0; color: #fff; font-weight: normal; font-family: 'Six Caps', sans-serif; font-size: 6rem;">FATCAP CONTROLS</h3>
+        <h3 style="margin: 0 0 20px 0; color: #fff; font-weight: normal; font-family: 'Six Caps', sans-serif; font-size: 6rem;">CONTROLS</h3>
         <p style="font-weight: normal; margin: 0;">A - Hold to draw in black<br>↑ - Increase thickness<br>↓ - Decrease thickness<br>S - Save canvas as .PNG<br>R - Reset canvas<br>Esc - Return to title</p>
         <button id="closeModal" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #fff; font-family: 'Material Symbols Outlined'; font-size: 30px; cursor: pointer;">close</button>
       </div>
