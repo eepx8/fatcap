@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Simplified, no zoom restrictions here -->
+  <style>
+    body {
+      touch-action: manipulation; /* Prevents pinch-zoom and double-tap zoom on modern browsers */
+    }
+  </style>
   <title>Px8 - FATCAP</title>
   <!-- Link to the p5.js library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
