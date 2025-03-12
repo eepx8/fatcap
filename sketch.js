@@ -148,7 +148,7 @@ function updateStartScreenElements() {
 }
 
 function setupStartScreen() {
-  subtitle = createElement('h2', "Px8 Studio's")
+  subtitle = createElement('h2', "Px8 Studio presents")
     .style('font-size', '1.1rem')
     .style('text-align', 'center')
     .style('color', '#161616')
