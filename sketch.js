@@ -71,7 +71,7 @@ function setup() {
 
     helpModal = createDiv(`
       <div style="background-color: #161616; color: #fff; padding: 40px; border-radius: 10px; text-align: left; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 18px; font-weight: normal; width: 400px; position: relative;">
-        <h3 style="margin: 0 0 20px 0; color: #fff; font-weight: normal; font-family: 'Six Caps', sans-serif; font-size: 3rem;">Six Caps</h3>
+        <h3 style="margin: 0 0 20px 0; color: #fff; font-weight: normal; font-family: 'Six Caps', sans-serif; font-size: 6rem;">FATCAP CONTROLS</h3>
         <p style="font-weight: normal; margin: 0;">A - Hold to draw in black<br>↑ - Increase thickness<br>↓ - Decrease thickness<br>S - Save canvas as .PNG<br>R - Reset canvas<br>Esc - Return to title</p>
         <button id="closeModal" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #fff; font-family: 'Material Symbols Outlined'; font-size: 30px; cursor: pointer;">close</button>
       </div>
@@ -237,6 +237,100 @@ function fadeOutStartScreen() {
   fadeOutProgress = 0;
   drip = null;
 
+  if (mobileMode) {
+    let buttonSize = 60;
+    let totalWidth = buttonSize * 5 + 10 * 4;
+    let startX = (width - totalWidth) / 2;
+    let buttonY = height - 90;
+
+    controls.push(createButton('+')
+      .mousePressed(() => { baseThickness += 20; showThicknessMeter(); })
+      .position(startX, buttonY)
+      .size(buttonSize, buttonSize)
+      .style('background-color', '#161616')
+      .style('color', '#fff')
+      .style('border', 'none')
+      .style('border-radius', '50%')
+      .style('font-size', '24px')
+      .style('display', 'flex')
+      .style('align-items', 'center')
+      .style('justify-content', 'center')
+      .style('opacity', '0')
+      .style('transition', 'opacity 0.5s ease-in'));
+
+    controls.push(createButton('-')
+      .mousePressed(() => { baseThickness = max(20, baseThickness - 20); showThicknessMeter(); })
+      .position(startX + buttonSize + 10, buttonY)
+      .size(buttonSize, buttonSize)
+      .style('background-color', '#161616')
+      .style('color', '#fff')
+      .style('border', 'none')
+      .style('border-radius', '50%')
+      .style('font-size', '24px')
+      .style('display', 'flex')
+      .style('align-items', 'center')
+      .style('justify-content', 'center')
+      .style('opacity', '0')
+      .style('transition', 'opacity 0.5s ease-in'));
+
+    controls.push(createButton('invert_colors')
+      .mousePressed(() => { isDrawingBlack = !isDrawingBlack; showColorMeter(); })
+      .position(startX + (buttonSize + 10) * 2, buttonY)
+      .size(buttonSize, buttonSize)
+      .style('background-color', '#161616')
+      .style('color', '#fff')
+      .style('border', 'none')
+      .style('border-radius', '50%')
+      .style('font-family', 'Material Symbols Outlined')
+      .style('font-size', '24px')
+      .style('display', 'flex')
+      .style('align-items', 'center')
+      .style('justify-content', 'center')
+      .style('opacity', '0')
+      .style('transition', 'opacity 0.5s ease-in'));
+
+    controls.push(createButton('restart_alt')
+      .mousePressed(() => { if (splines.length > 0) { isFadingOutCanvas = true; fadeOutCanvasProgress = 0; }})
+      .position(startX + (buttonSize + 10) * 3, buttonY)
+      .size(buttonSize, buttonSize)
+      .style('background-color', '#161616')
+      .style('color', '#fff')
+      .style('border', 'none')
+      .style('border-radius', '50%')
+      .style('font-family', 'Material Symbols Outlined')
+      .style('font-size', '24px')
+      .style('display', 'flex')
+      .style('align-items', 'center')
+      .style('justify-content', 'center')
+      .style('opacity', '0')
+      .style('transition', 'opacity 0.5s ease-in'));
+
+    controls.push(createButton('arrow_downward')
+      .mousePressed(() => {
+        background(255);
+        splines.forEach(spline => drawSpline(spline));
+        if (currentSpline) drawSpline(currentSpline);
+        saveCanvas('FATCAP_ART', 'png');
+      })
+      .position(startX + (buttonSize + 10) * 4, buttonY)
+      .size(buttonSize, buttonSize)
+      .style('background-color', '#161616')
+      .style('color', '#fff')
+      .style('border', 'none')
+      .style('border-radius', '50%')
+      .style('font-family', 'Material Symbols Outlined')
+      .style('font-size', '24px')
+      .style('display', 'flex')
+      .style('align-items', 'center')
+      .style('justify-content', 'center')
+      .style('opacity', '0')
+      .style('transition', 'opacity 0.5s ease-in'));
+
+    setTimeout(() => {
+      controls.forEach(control => control.style('opacity', '1'));
+    }, 10);
+  }
+
   setTimeout(() => {
     subtitle.remove();
     startText.remove();
@@ -246,86 +340,7 @@ function fadeOutStartScreen() {
         startScreen = false;
         isFadingOut = false;
         title.remove();
-
-        if (mobileMode) {
-          let buttonSize = 60;
-          let totalWidth = buttonSize * 5 + 10 * 4;
-          let startX = (width - totalWidth) / 2;
-          let buttonY = height - 90;
-
-          controls.push(createButton('+')
-            .mousePressed(() => { baseThickness += 20; showThicknessMeter(); })
-            .position(startX, buttonY)
-            .size(buttonSize, buttonSize)
-            .style('background-color', '#161616')
-            .style('color', '#fff')
-            .style('border', 'none')
-            .style('border-radius', '50%')
-            .style('font-size', '24px')
-            .style('display', 'flex')
-            .style('align-items', 'center')
-            .style('justify-content', 'center'));
-
-          controls.push(createButton('-')
-            .mousePressed(() => { baseThickness = max(20, baseThickness - 20); showThicknessMeter(); })
-            .position(startX + buttonSize + 10, buttonY)
-            .size(buttonSize, buttonSize)
-            .style('background-color', '#161616')
-            .style('color', '#fff')
-            .style('border', 'none')
-            .style('border-radius', '50%')
-            .style('font-size', '24px')
-            .style('display', 'flex')
-            .style('align-items', 'center')
-            .style('justify-content', 'center'));
-
-          controls.push(createButton('invert_colors')
-            .mousePressed(() => { isDrawingBlack = !isDrawingBlack; showColorMeter(); })
-            .position(startX + (buttonSize + 10) * 2, buttonY)
-            .size(buttonSize, buttonSize)
-            .style('background-color', '#161616')
-            .style('color', '#fff')
-            .style('border', 'none')
-            .style('border-radius', '50%')
-            .style('font-family', 'Material Symbols Outlined')
-            .style('font-size', '24px')
-            .style('display', 'flex')
-            .style('align-items', 'center')
-            .style('justify-content', 'center'));
-
-          controls.push(createButton('restart_alt')
-            .mousePressed(() => { if (splines.length > 0) { isFadingOutCanvas = true; fadeOutCanvasProgress = 0; }})
-            .position(startX + (buttonSize + 10) * 3, buttonY)
-            .size(buttonSize, buttonSize)
-            .style('background-color', '#161616')
-            .style('color', '#fff')
-            .style('border', 'none')
-            .style('border-radius', '50%')
-            .style('font-family', 'Material Symbols Outlined')
-            .style('font-size', '24px')
-            .style('display', 'flex')
-            .style('align-items', 'center')
-            .style('justify-content', 'center'));
-
-          controls.push(createButton('arrow_downward')
-            .mousePressed(() => {
-              background(255);
-              splines.forEach(spline => drawSpline(spline));
-              if (currentSpline) drawSpline(currentSpline);
-              saveCanvas('FATCAP_ART', 'png');
-            })
-            .position(startX + (buttonSize + 10) * 4, buttonY)
-            .size(buttonSize, buttonSize)
-            .style('background-color', '#161616')
-            .style('color', '#fff')
-            .style('border', 'none')
-            .style('border-radius', '50%')
-            .style('font-family', 'Material Symbols Outlined')
-            .style('font-size', '24px')
-            .style('display', 'flex')
-            .style('align-items', 'center')
-            .style('justify-content', 'center'));
-        } else {
+        if (!mobileMode) {
           helpButton.style('display', 'block');
         }
       }, 500);
