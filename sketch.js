@@ -46,6 +46,21 @@ function setup() {
   document.body.style.mozUserSelect = 'none';
   document.body.style.msUserSelect = 'none';
   document.body.style.touchAction = 'manipulation';
+  
+  // Add CSS for mobile buttons to ensure they're clickable
+  let style = document.createElement('style');
+  style.textContent = `
+    .control-button {
+      z-index: 1000 !important;
+      cursor: pointer !important;
+      -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+      touch-action: manipulation !important;
+      user-select: none !important;
+      -webkit-user-select: none !important;
+      -webkit-touch-callout: none !important;
+    }
+  `;
+  document.head.appendChild(style);
 
   setupStartScreen();
 
@@ -279,51 +294,193 @@ function fadeOutStartScreen() {
     let buttonSize = 60;
     let totalWidth = buttonSize * 5 + 10 * 4;
     let startX = (width - totalWidth) / 2;
-    let buttonY = height - 90;
+    
+    // Position buttons higher up from the bottom to avoid system UI overlaps
+    let buttonY = height - 120;
+    
+    // Ensure buttons are within the visible area
+    if (buttonY + buttonSize > height - 20) {
+      buttonY = height - buttonSize - 20;
+    }
+    
+    console.log(`Positioning mobile buttons at Y: ${buttonY}, screen height: ${height}`);
 
     // Create increase thickness button
-    controls.push(createButton('+')
+    let increaseBtn = createButton('+')
       .addClass('control-button')
-      .position(startX, buttonY)
-      .mousePressed(() => { baseThickness += 20; showThicknessMeter(); }));
+      .position(startX, buttonY);
+    
+    // Make buttons more visible for debugging
+    increaseBtn.style('z-index', '1000');
+    increaseBtn.style('opacity', '1'); // Make immediately visible
+    increaseBtn.style('font-size', '28px'); // Larger text
+    increaseBtn.style('font-weight', 'bold'); // Bolder text
+    
+    // Add both mouse and touch handlers
+    increaseBtn.mousePressed(() => { 
+      console.log("Increase thickness button pressed");
+      baseThickness += 20; 
+      showThicknessMeter(); 
+    });
+    
+    // Add touch event listeners directly to the DOM element
+    if (increaseBtn.elt) {
+      increaseBtn.elt.addEventListener('touchstart', (e) => {
+        console.log("Increase thickness button touchstart");
+      }, false);
+      
+      increaseBtn.elt.addEventListener('touchend', (e) => {
+        console.log("Increase thickness button touchend");
+        e.preventDefault();
+        baseThickness += 20;
+        showThicknessMeter();
+      }, false);
+    }
+    
+    controls.push(increaseBtn);
 
     // Create decrease thickness button
-    controls.push(createButton('-')
+    let decreaseBtn = createButton('-')
       .addClass('control-button')
-      .position(startX + buttonSize + 10, buttonY)
-      .mousePressed(() => { baseThickness = max(20, baseThickness - 20); showThicknessMeter(); }));
+      .position(startX + buttonSize + 10, buttonY);
+    
+    // Make buttons more visible for debugging
+    decreaseBtn.style('z-index', '1000');
+    decreaseBtn.style('opacity', '1'); // Make immediately visible
+    decreaseBtn.style('font-size', '28px'); // Larger text
+    decreaseBtn.style('font-weight', 'bold'); // Bolder text
+    
+    decreaseBtn.mousePressed(() => { 
+      console.log("Decrease thickness button pressed");
+      baseThickness = max(20, baseThickness - 20); 
+      showThicknessMeter(); 
+    });
+    
+    // Add touch event listeners
+    if (decreaseBtn.elt) {
+      decreaseBtn.elt.addEventListener('touchstart', (e) => {
+        console.log("Decrease thickness button touchstart");
+      }, false);
+      
+      decreaseBtn.elt.addEventListener('touchend', (e) => {
+        console.log("Decrease thickness button touchend");
+        e.preventDefault();
+        baseThickness = max(20, baseThickness - 20);
+        showThicknessMeter();
+      }, false);
+    }
+    
+    controls.push(decreaseBtn);
 
     // Create color toggle button
-    controls.push(createButton('invert_colors')
+    let colorBtn = createButton('invert_colors')
       .addClass('control-button')
       .addClass('icon')
-      .position(startX + (buttonSize + 10) * 2, buttonY)
-      .mousePressed(() => { isDrawingBlack = !isDrawingBlack; showColorMeter(); }));
+      .position(startX + (buttonSize + 10) * 2, buttonY);
+    
+    // Make buttons more visible for debugging
+    colorBtn.style('z-index', '1000');
+    colorBtn.style('opacity', '1'); // Make immediately visible
+    colorBtn.style('font-size', '28px'); // Larger icon
+    
+    colorBtn.mousePressed(() => { 
+      console.log("Color toggle button pressed");
+      isDrawingBlack = !isDrawingBlack; 
+      showColorMeter(); 
+    });
+    
+    // Add touch event listeners
+    if (colorBtn.elt) {
+      colorBtn.elt.addEventListener('touchstart', (e) => {
+        console.log("Color toggle button touchstart");
+      }, false);
+      
+      colorBtn.elt.addEventListener('touchend', (e) => {
+        console.log("Color toggle button touchend");
+        e.preventDefault();
+        isDrawingBlack = !isDrawingBlack;
+        showColorMeter();
+      }, false);
+    }
+    
+    controls.push(colorBtn);
 
     // Create reset button
-    controls.push(createButton('restart_alt')
+    let resetBtn = createButton('restart_alt')
       .addClass('control-button')
       .addClass('icon')
-      .position(startX + (buttonSize + 10) * 3, buttonY)
-      .mousePressed(() => { if (splines.length > 0) { isFadingOutCanvas = true; fadeOutCanvasProgress = 0; }}));
+      .position(startX + (buttonSize + 10) * 3, buttonY);
+    
+    // Make buttons more visible for debugging
+    resetBtn.style('z-index', '1000');
+    resetBtn.style('opacity', '1'); // Make immediately visible
+    resetBtn.style('font-size', '28px'); // Larger icon
+    
+    resetBtn.mousePressed(() => { 
+      console.log("Reset button pressed");
+      if (splines.length > 0) { 
+        isFadingOutCanvas = true; 
+        fadeOutCanvasProgress = 0; 
+      }
+    });
+    
+    // Add touch event listeners
+    if (resetBtn.elt) {
+      resetBtn.elt.addEventListener('touchstart', (e) => {
+        console.log("Reset button touchstart");
+      }, false);
+      
+      resetBtn.elt.addEventListener('touchend', (e) => {
+        console.log("Reset button touchend");
+        e.preventDefault();
+        if (splines.length > 0) {
+          isFadingOutCanvas = true;
+          fadeOutCanvasProgress = 0;
+        }
+      }, false);
+    }
+    
+    controls.push(resetBtn);
 
     // Create save button
-    controls.push(createButton('arrow_downward')
+    let saveBtn = createButton('arrow_downward')
       .addClass('control-button')
       .addClass('icon')
-      .position(startX + (buttonSize + 10) * 4, buttonY)
-      .mousePressed(() => {
+      .position(startX + (buttonSize + 10) * 4, buttonY);
+    
+    // Make buttons more visible for debugging
+    saveBtn.style('z-index', '1000');
+    saveBtn.style('opacity', '1'); // Make immediately visible
+    saveBtn.style('font-size', '28px'); // Larger icon
+    
+    saveBtn.mousePressed(() => {
+      console.log("Save button pressed");
+      background(255);
+      splines.forEach(spline => drawSpline(spline));
+      if (currentSpline) drawSpline(currentSpline);
+      saveCanvas('FATCAP_ART', 'png');
+    });
+    
+    // Add touch event listeners
+    if (saveBtn.elt) {
+      saveBtn.elt.addEventListener('touchstart', (e) => {
+        console.log("Save button touchstart");
+      }, false);
+      
+      saveBtn.elt.addEventListener('touchend', (e) => {
+        console.log("Save button touchend");
+        e.preventDefault();
         background(255);
         splines.forEach(spline => drawSpline(spline));
         if (currentSpline) drawSpline(currentSpline);
         saveCanvas('FATCAP_ART', 'png');
-      }));
+      }, false);
+    }
+    
+    controls.push(saveBtn);
 
-    // Fade in the controls
-    setTimeout(() => {
-      console.log("Fading in mobile controls");
-      controls.forEach(control => control.style('opacity', '1'));
-    }, 10);
+    // No need for fade-in since we're making them immediately visible
+    console.log("Mobile controls created and visible");
   } else {
     // Show desktop color toggle button
     if (colorToggleButton) {
@@ -611,14 +768,76 @@ function mouseReleased() {
 function touchStarted() {
   console.log("Touch started, startScreen:", startScreen, "isFadingOut:", isFadingOut);
   
+  // Check if we're touching a control button
+  let touchingButton = false;
+  
+  // Only check for button touches if we have controls
+  if (controls.length > 0) {
+    for (let i = 0; i < controls.length; i++) {
+      let control = controls[i];
+      if (control && control.elt) {
+        let rect = control.elt.getBoundingClientRect();
+        // Check if any touch is on this button
+        if (touches && touches.length > 0) {
+          for (let t = 0; t < touches.length; t++) {
+            if (touches[t].x >= rect.left && touches[t].x <= rect.right &&
+                touches[t].y >= rect.top && touches[t].y <= rect.bottom) {
+              touchingButton = true;
+              break;
+            }
+          }
+        }
+      }
+      if (touchingButton) break;
+    }
+  }
+  
+  // If touching a button, allow the event to propagate
+  if (touchingButton) {
+    console.log("Touching a button, allowing event to propagate");
+    return;
+  }
+  
+  // Otherwise handle as before
   if (startScreen && !isFadingOut) {
     fadeOutStartScreen();
     return false; // Prevent default behavior
   }
+  
+  return false; // Prevent default behavior for canvas touches
 }
 
 function touchMoved() {
   console.log("Touch moved, startScreen:", startScreen, "startTime:", startTime);
+  
+  // Check if we're touching a control button
+  let touchingButton = false;
+  
+  // Only check for button touches if we have controls
+  if (controls.length > 0) {
+    for (let i = 0; i < controls.length; i++) {
+      let control = controls[i];
+      if (control && control.elt) {
+        let rect = control.elt.getBoundingClientRect();
+        // Check if any touch is on this button
+        if (touches && touches.length > 0) {
+          for (let t = 0; t < touches.length; t++) {
+            if (touches[t].x >= rect.left && touches[t].x <= rect.right &&
+                touches[t].y >= rect.top && touches[t].y <= rect.bottom) {
+              touchingButton = true;
+              break;
+            }
+          }
+        }
+      }
+      if (touchingButton) break;
+    }
+  }
+  
+  // If touching a button, allow the event to propagate
+  if (touchingButton) {
+    return;
+  }
   
   // Only allow drawing when not in start screen or when startTime is set (matching sketch2.js)
   if (startScreen && !startTime) return false;
@@ -658,6 +877,31 @@ function touchMoved() {
 
 function touchEnded() {
   console.log("Touch ended, startScreen:", startScreen, "startTime:", startTime);
+  
+  // Check if we're touching a control button
+  let touchingButton = false;
+  
+  // Only check for button touches if we have controls
+  if (controls.length > 0) {
+    for (let i = 0; i < controls.length; i++) {
+      let control = controls[i];
+      if (control && control.elt) {
+        let rect = control.elt.getBoundingClientRect();
+        // For touchEnded, we check if the last touch position was on a button
+        // We can't use touches array as it's empty on touchEnded
+        if (mouseX >= rect.left && mouseX <= rect.right &&
+            mouseY >= rect.top && mouseY <= rect.bottom) {
+          touchingButton = true;
+          break;
+        }
+      }
+    }
+  }
+  
+  // If touching a button, allow the event to propagate
+  if (touchingButton) {
+    return;
+  }
   
   // Don't process if we're in the start screen and startTime is not set (matching sketch2.js)
   if (startScreen && !startTime) return false;
