@@ -15,6 +15,7 @@ let drip = null;
 let startTime = null;
 
 function setup() {
+  console.log("Setup started, mobileMode:", windowWidth < 600);
   mobileMode = windowWidth < 600;
   baseThickness = mobileMode ? 60 : 120;
   createCanvas(windowWidth, windowHeight);
@@ -38,6 +39,7 @@ function setup() {
   setupStartScreen();
 
   if (!mobileMode) {
+    console.log("Creating help button for desktop");
     helpButton = createButton('<span class="icon">help</span>')
       .position(width - 70, 10)
       .size(60, 60)
@@ -71,7 +73,7 @@ function setup() {
 
     helpModal = createDiv(`
       <div style="background-color: #161616; color: #fff; padding: 40px; border-radius: 10px; text-align: left; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 18px; font-weight: normal; width: 400px; position: relative;">
-        <h3 style="margin: 0 0 20px 0; color: #fff; font-weight: normal; font-family: 'Six Caps', sans-serif; font-size: 5rem;">CONTROLS</h3>
+        <h3 style="margin: 0 0 20px 0; color: #fff; font-weight: normal; font-family: 'Six Caps', sans-serif; font-size: 10rem;">CONTROLS</h3>
         <p style="font-weight: normal; margin: 0;">A - Hold to draw in black<br>↑ - Increase thickness<br>↓ - Decrease thickness<br>S - Save canvas as .PNG<br>R - Reset canvas<br>Esc - Return to title</p>
         <button id="closeModal" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #fff; font-family: 'Material Symbols Outlined'; font-size: 30px; cursor: pointer;">close</button>
       </div>
@@ -106,16 +108,19 @@ function setup() {
   }, { passive: false });
 
   if (mobileMode && 'orientation' in screen) {
+    console.log("Attempting orientation lock");
     screen.orientation.lock('portrait').catch(err => {
       console.log("Orientation lock failed: ", err);
     });
   }
+  console.log("Setup completed");
 }
 
 function windowResized() {
   let prevMobileMode = mobileMode;
   resizeCanvas(windowWidth, windowHeight);
   mobileMode = windowWidth < 600;
+  console.log("Window resized, mobileMode:", mobileMode);
   
   if (!mobileMode && helpButton) {
     helpButton.position(width - 70, 10);
@@ -124,8 +129,8 @@ function windowResized() {
     updateStartScreenElements();
   }
   
-  // Force reset when switching to mobile mode
   if (mobileMode && !prevMobileMode) {
+    console.log("Resetting to start screen for mobile");
     resetToStartScreen();
   }
 }
@@ -139,12 +144,12 @@ function updateStartScreenElements() {
   let fontSize = map(constrain(windowWidth, minWidth, maxWidth), minWidth, maxWidth, minSize, maxSize);
   title.style('font-size', `${fontSize}rem`);
 
-  subtitle.style('top', mobileMode ? '25%' : '15%');
+  subtitle.style('top', mobileMode ? '37%' : '15%');
   subtitle.style('margin-bottom', mobileMode ? '5px' : '60px');
   title.style('top', '50%');
   title.style('margin-bottom', mobileMode ? '5px' : '60px');
   if (startText) {
-    startText.style('top', mobileMode ? '65%' : '85%');
+    startText.style('top', mobileMode ? '80%' : '85%');
   }
 
   if (startScreen && !startTime && title.elt.offsetWidth > 0) {
@@ -161,6 +166,7 @@ function updateStartScreenElements() {
 }
 
 function setupStartScreen() {
+  console.log("Setting up start screen, mobileMode:", mobileMode);
   subtitle = createElement('h2', "Px8 Studio's")
     .style('font-size', '1.1rem')
     .style('text-align', 'center')
@@ -169,7 +175,7 @@ function setupStartScreen() {
     .style('font-weight', 'normal')
     .style('position', 'absolute')
     .style('left', '50%')
-    .style('top', mobileMode ? '25%' : '15%')
+    .style('top', mobileMode ? '37%' : '15%')
     .style('transform', 'translateX(-50%)')
     .style('opacity', '0')
     .style('transition', 'opacity 0.5s ease-in')
@@ -205,7 +211,7 @@ function setupStartScreen() {
     .style('letter-spacing', '4px')
     .style('position', 'absolute')
     .style('left', '50%')
-    .style('top', mobileMode ? '65%' : '85%')
+    .style('top', mobileMode ? '80%' : '85%')
     .style('transform', 'translateX(-50%)')
     .style('opacity', '0')
     .style('transition', 'opacity 1.5s ease-in-out')
@@ -213,11 +219,13 @@ function setupStartScreen() {
     .style('display', 'none');
 
   setTimeout(() => {
+    console.log("Showing subtitle");
     subtitle.style('display', 'block');
     setTimeout(() => subtitle.style('opacity', '1'), 10);
   }, 100);
 
   setTimeout(() => {
+    console.log("Showing title");
     title.style('display', 'block');
     updateStartScreenElements();
     setTimeout(() => {
@@ -231,6 +239,7 @@ function setupStartScreen() {
   }, 600);
 
   setTimeout(() => {
+    console.log("Showing startText");
     startText.style('display', 'block');
     setTimeout(() => startText.style('opacity', '1'), 10);
     setInterval(() => {
@@ -239,10 +248,11 @@ function setupStartScreen() {
       }
     }, 1000);
   }, 1100);
+  console.log("Start screen setup completed");
 }
 
 function fadeOutStartScreen() {
-  console.log("Start screen triggered!");
+  console.log("Start screen triggered, mobileMode:", mobileMode);
   subtitle.style('opacity', '0');
   startText.style('opacity', '0');
   startTime = millis();
@@ -251,6 +261,7 @@ function fadeOutStartScreen() {
   drip = null;
 
   if (mobileMode) {
+    console.log("Creating mobile controls");
     let buttonSize = 60;
     let totalWidth = buttonSize * 5 + 10 * 4;
     let startX = (width - totalWidth) / 2;
@@ -340,6 +351,7 @@ function fadeOutStartScreen() {
       .style('transition', 'opacity 0.5s ease-in'));
 
     setTimeout(() => {
+      console.log("Fading in mobile controls");
       controls.forEach(control => control.style('opacity', '1'));
     }, 10);
   }
@@ -438,6 +450,7 @@ function closeHelpModal() {
 }
 
 function draw() {
+  console.log("Draw loop running, startScreen:", startScreen, "mobileMode:", mobileMode);
   if (startScreen && !startTime) {
     background(startScreenColor);
     if (drip && drip.startTime) {
@@ -494,6 +507,7 @@ function draw() {
 }
 
 function mousePressed() {
+  console.log("Mouse pressed, startScreen:", startScreen, "isFadingOut:", isFadingOut, "mobileMode:", mobileMode);
   if (startScreen && !isFadingOut) {
     if (!mobileMode && helpButton && dist(mouseX, mouseY, helpButton.position().x + 30, helpButton.position().y + 30) < 30) {
       return;
