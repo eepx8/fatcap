@@ -71,7 +71,7 @@ function setup() {
 
     helpModal = createDiv(`
       <div style="background-color: #161616; color: #fff; padding: 40px; border-radius: 10px; text-align: left; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 18px; font-weight: normal; width: 400px; position: relative;">
-        <h3 style="margin: 0 0 20px 0; color: #fff; font-weight: normal; font-family: 'Six Caps', sans-serif; font-size: 6rem;">CONTROLS</h3>
+        <h3 style="margin: 0 0 20px 0; color: #fff; font-weight: normal; font-family: 'Six Caps', sans-serif; font-size: 5rem;">CONTROLS</h3>
         <p style="font-weight: normal; margin: 0;">A - Hold to draw in black<br>↑ - Increase thickness<br>↓ - Decrease thickness<br>S - Save canvas as .PNG<br>R - Reset canvas<br>Esc - Return to title</p>
         <button id="closeModal" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #fff; font-family: 'Material Symbols Outlined'; font-size: 30px; cursor: pointer;">close</button>
       </div>
@@ -104,16 +104,29 @@ function setup() {
       event.preventDefault();
     }
   }, { passive: false });
+
+  if (mobileMode && 'orientation' in screen) {
+    screen.orientation.lock('portrait').catch(err => {
+      console.log("Orientation lock failed: ", err);
+    });
+  }
 }
 
 function windowResized() {
+  let prevMobileMode = mobileMode;
   resizeCanvas(windowWidth, windowHeight);
   mobileMode = windowWidth < 600;
+  
   if (!mobileMode && helpButton) {
     helpButton.position(width - 70, 10);
   }
   if (startScreen || startTime) {
     updateStartScreenElements();
+  }
+  
+  // Force reset when switching to mobile mode
+  if (mobileMode && !prevMobileMode) {
+    resetToStartScreen();
   }
 }
 
@@ -183,7 +196,7 @@ function setupStartScreen() {
     .style('margin-bottom', mobileMode ? '5px' : '60px');
 
   startText = createElement('p', 'START DRAWING')
-    .style('font-size', '1.2rem')
+    .style('font-size', mobileMode ? '1.1rem' : '1.2rem')
     .style('text-align', 'center')
     .style('color', '#161616')
     .style('font-family', "'Plus Jakarta Sans', sans-serif")
@@ -224,7 +237,7 @@ function setupStartScreen() {
       if (startText && startText.elt) {
         startText.style('opacity', startText.style('opacity') === '1' ? '0' : '1');
       }
-    }, 1500);
+    }, 1000);
   }, 1100);
 }
 
@@ -344,7 +357,7 @@ function fadeOutStartScreen() {
           helpButton.style('display', 'block');
         }
       }, 500);
-    }, 5000);
+    }, 3000);
   }, 300);
 }
 
@@ -482,6 +495,9 @@ function draw() {
 
 function mousePressed() {
   if (startScreen && !isFadingOut) {
+    if (!mobileMode && helpButton && dist(mouseX, mouseY, helpButton.position().x + 30, helpButton.position().y + 30) < 30) {
+      return;
+    }
     fadeOutStartScreen();
   }
 }
@@ -500,9 +516,9 @@ function mouseReleased() {
 
   currentSpline.points.forEach((pt, i, arr) => {
     if (i < arr.length - 1 && dist(pt.x, pt.y, arr[i + 1].x, arr[i + 1].y) > 1) {
-      let dripChance = isDrawingBlack ? 0.05 : 0.1;
+      let dripChance = isDrawingBlack ? (mobileMode ? 0.025 : 0.05) : (mobileMode ? 0.05 : 0.1);
       if (random() < dripChance) {
-        let thickness = random(10, 30);
+        let thickness = mobileMode ? random(5, 15) : random(10, 30);
         let targetY = min(pt.y + random(mobileMode ? 100 : 200, mobileMode ? 300 : 500), height);
         currentSpline.verticalLines.push({ x: pt.x, y: pt.y, targetY, startTime: millis(), thickness, delay: random(500, 2000) });
       }
