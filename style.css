@@ -1,0 +1,292 @@
+/* 
+ * FATCAP v3 Styles
+ * Main stylesheet for the application
+ */
+
+/* Base Elements */
+body {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  touch-action: manipulation;
+  text-rendering: optimizeLegibility; 
+  -webkit-font-smoothing: antialiased; 
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Canvas Styling */
+canvas {
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
+}
+
+/* Update .p-span to stay inline and inherit styles */
+.p-span {
+  display: inline; /* Keep in flow with text */
+  visibility: visible; /* Ensure it's rendered correctly */
+  color: inherit; /* Match title color */
+  font-family: inherit; /* Match title font */
+  font-weight: inherit;
+  -webkit-text-stroke: inherit; /* Webkit-specific text stroke property */
+  font-size: inherit; /* Match parent font size */
+  line-height: inherit; /* Match parent line height */
+  letter-spacing: inherit; /* Match parent letter spacing */
+  text-transform: inherit; /* Match parent text transformation */
+}
+
+/* Typography Components */
+.title {
+  text-align: center;
+  color: #161616;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin-top: 0;
+  opacity: 0;
+  transition: opacity 0.5s ease-in;
+  z-index: 10;
+  display: none;
+  width: 80%; /* Control the container width */
+  max-width: 600px; /* Maximum width */
+  margin-bottom: 60px; /* Default margin */
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  text-align: center;
+  color: #161616;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: normal;
+  position: absolute;
+  left: 50%;
+  top: 15%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.5s ease-in;
+  z-index: 10;
+  display: none;
+  margin-bottom: 60px; /* Default margin */
+}
+
+.start-text {
+  text-align: center;
+  color: #161616;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  position: absolute;
+  left: 50%;
+  top: 85%; /* Default for desktop */
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 1.5s ease-in-out;
+  z-index: 10;
+  display: none;
+  font-size: 1.2rem; /* Default for desktop */
+}
+
+/* SVG Logo styling */
+.logo-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  fill: #161616;
+  color: #161616;
+}
+
+/* Ensure SVG paths have the right color */
+.logo-svg path, 
+.logo-svg polygon, 
+.logo-svg g {
+  fill: #161616;
+}
+
+/* UI Controls */
+.help-button {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background-color: #161616;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  font-family: 'Material Symbols Outlined';
+  font-size: 24px;
+  z-index: 1000;
+  display: none;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  top: 10px;
+  right: 10px;
+}
+
+.help-button .icon {
+  transition: opacity 0.2s ease;
+}
+
+.control-button {
+  width: 60px;
+  height: 60px;
+  background-color: #161616;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.5s ease-in;
+}
+
+.control-button.icon {
+  font-family: 'Material Symbols Outlined';
+}
+
+/* Help Modal */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(22, 22, 22, 0.5);
+  z-index: 900;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.help-modal {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: none;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.3s ease-out;
+}
+
+.help-modal-content {
+  background-color: #161616;
+  color: #fff;
+  padding: 40px;
+  border-radius: 10px;
+  text-align: left;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 18px;
+  font-weight: normal;
+  width: 400px;
+  position: relative;
+}
+
+.help-modal h3 {
+  margin: 0 0 20px 0;
+  color: #fff;
+  font-weight: normal;
+  font-family: 'Six Caps', sans-serif;
+  font-size: 5rem;
+}
+
+.help-modal p {
+  font-weight: normal;
+  margin: 0;
+}
+
+.close-modal {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #fff;
+  font-family: 'Material Symbols Outlined';
+  font-size: 30px;
+  cursor: pointer;
+}
+
+/* Meters */
+.meter {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(200, 200, 200, 0.8);
+  border-radius: 10px;
+  padding: 10px 20px;
+  text-align: center;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 16px;
+  color: #161616;
+}
+
+.thickness-meter {
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 150px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.color-meter {
+  top: calc(50% - 50px);
+  width: 150px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive Styles */
+@media (max-width: 599px) {
+  .subtitle {
+    top: 15%;
+    margin-bottom: 5px;
+  }
+  
+  .title {
+    margin-bottom: 5px;
+    width: 90%; /* Wider on mobile */
+  }
+  
+  .start-text {
+    top: 80%;
+    font-size: 1.1rem;
+  }
+  
+  /* Title width responsive adjustments */
+  @media (max-width: 400px) {
+    .title {
+      width: 90%;
+    }
+  }
+}
+
+@media (min-width: 600px) and (max-width: 899px) {
+  .title {
+    width: 80%;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1199px) {
+  .title {
+    width: 70%;
+  }
+}
+
+@media (min-width: 1200px) {
+  .title {
+    width: 60%;
+  }
+}
