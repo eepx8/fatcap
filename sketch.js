@@ -73,7 +73,7 @@ function setup() {
 
     helpModal = createDiv(`
       <div style="background-color: #161616; color: #fff; padding: 40px; border-radius: 10px; text-align: left; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 18px; font-weight: normal; width: 400px; position: relative;">
-        <h3 style="margin: 0 0 20px 0; color: #fff; font-weight: normal; font-family: 'Six Caps', sans-serif; font-size: 10rem;">CONTROLS</h3>
+        <h3 style="margin: 0 0 20px 0; color: #fff; font-weight: normal; font-family: 'Six Caps', sans-serif; font-size: 5rem;">CONTROLS</h3>
         <p style="font-weight: normal; margin: 0;">A - Hold to draw in black<br>↑ - Increase thickness<br>↓ - Decrease thickness<br>S - Save canvas as .PNG<br>R - Reset canvas<br>Esc - Return to title</p>
         <button id="closeModal" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #fff; font-family: 'Material Symbols Outlined'; font-size: 30px; cursor: pointer;">close</button>
       </div>
@@ -91,28 +91,6 @@ function setup() {
   }
 
   document.body.style.touchAction = 'manipulation';
-
-  let lastTouchTime = 0;
-  document.addEventListener('touchstart', function(event) {
-    const now = Date.now();
-    if (now - lastTouchTime < 300 && event.touches.length === 1) {
-      event.preventDefault();
-    }
-    lastTouchTime = now;
-  }, { passive: false });
-
-  document.addEventListener('touchmove', function(event) {
-    if (event.touches.length > 1) {
-      event.preventDefault();
-    }
-  }, { passive: false });
-
-  if (mobileMode && 'orientation' in screen) {
-    console.log("Attempting orientation lock");
-    screen.orientation.lock('portrait').catch(err => {
-      console.log("Orientation lock failed: ", err);
-    });
-  }
   console.log("Setup completed");
 }
 
@@ -144,7 +122,7 @@ function updateStartScreenElements() {
   let fontSize = map(constrain(windowWidth, minWidth, maxWidth), minWidth, maxWidth, minSize, maxSize);
   title.style('font-size', `${fontSize}rem`);
 
-  subtitle.style('top', mobileMode ? '37%' : '15%');
+  subtitle.style('top', mobileMode ? '15%' : '15%'); // Changed to 15% on mobile
   subtitle.style('margin-bottom', mobileMode ? '5px' : '60px');
   title.style('top', '50%');
   title.style('margin-bottom', mobileMode ? '5px' : '60px');
@@ -175,7 +153,7 @@ function setupStartScreen() {
     .style('font-weight', 'normal')
     .style('position', 'absolute')
     .style('left', '50%')
-    .style('top', mobileMode ? '37%' : '15%')
+    .style('top', mobileMode ? '15%' : '15%') // Changed to 15% on mobile
     .style('transform', 'translateX(-50%)')
     .style('opacity', '0')
     .style('transition', 'opacity 0.5s ease-in')
@@ -368,6 +346,7 @@ function fadeOutStartScreen() {
         if (!mobileMode) {
           helpButton.style('display', 'block');
         }
+        console.log("Start screen faded out, startScreen:", startScreen);
       }, 500);
     }, 3000);
   }, 300);
@@ -450,7 +429,7 @@ function closeHelpModal() {
 }
 
 function draw() {
-  console.log("Draw loop running, startScreen:", startScreen, "mobileMode:", mobileMode);
+  console.log("Draw loop, startScreen:", startScreen, "mobileMode:", mobileMode);
   if (startScreen && !startTime) {
     background(startScreenColor);
     if (drip && drip.startTime) {
@@ -506,6 +485,7 @@ function draw() {
   }
 }
 
+// Mouse events for desktop
 function mousePressed() {
   console.log("Mouse pressed, startScreen:", startScreen, "isFadingOut:", isFadingOut, "mobileMode:", mobileMode);
   if (startScreen && !isFadingOut) {
@@ -517,6 +497,7 @@ function mousePressed() {
 }
 
 function mouseDragged() {
+  console.log("Mouse dragged, startScreen:", startScreen, "startTime:", startTime);
   if (startScreen && !startTime) return;
   if (!currentSpline) {
     currentSpline = { points: [], verticalLines: [], baseThickness, color: isDrawingBlack ? color(22, 22, 22) : colors[currentColorIndex] };
@@ -525,6 +506,7 @@ function mouseDragged() {
 }
 
 function mouseReleased() {
+  console.log("Mouse released, startScreen:", startScreen, "startTime:", startTime);
   if (startScreen && !startTime) return;
   if (!currentSpline) return;
 
@@ -542,6 +524,47 @@ function mouseReleased() {
   splines.push(currentSpline);
   currentSpline = null;
   currentColorIndex = (currentColorIndex + 1) % colors.length;
+}
+
+// Touch events for mobile
+function touchStarted() {
+  console.log("Touch started, startScreen:", startScreen, "isFadingOut:", isFadingOut, "mobileMode:", mobileMode, "touchX:", touches[0].x, "touchY:", touches[0].y);
+  if (startScreen && !isFadingOut) {
+    fadeOutStartScreen();
+    return false; // Prevent default behavior
+  }
+}
+
+function touchMoved() {
+  console.log("Touch moved, startScreen:", startScreen, "startTime:", startTime, "touchX:", touches[0].x, "touchY:", touches[0].y);
+  if (startScreen && !startTime) return false;
+  if (!currentSpline) {
+    currentSpline = { points: [], verticalLines: [], baseThickness, color: isDrawingBlack ? color(22, 22, 22) : colors[currentColorIndex] };
+  }
+  currentSpline.points.push(createVector(touches[0].x, touches[0].y));
+  return false; // Prevent scrolling
+}
+
+function touchEnded() {
+  console.log("Touch ended, startScreen:", startScreen, "startTime:", startTime);
+  if (startScreen && !startTime) return false;
+  if (!currentSpline) return false;
+
+  currentSpline.points.forEach((pt, i, arr) => {
+    if (i < arr.length - 1 && dist(pt.x, pt.y, arr[i + 1].x, arr[i + 1].y) > 1) {
+      let dripChance = isDrawingBlack ? (mobileMode ? 0.025 : 0.05) : (mobileMode ? 0.05 : 0.1);
+      if (random() < dripChance) {
+        let thickness = mobileMode ? random(5, 15) : random(10, 30);
+        let targetY = min(pt.y + random(mobileMode ? 100 : 200, mobileMode ? 300 : 500), height);
+        currentSpline.verticalLines.push({ x: pt.x, y: pt.y, targetY, startTime: millis(), thickness, delay: random(500, 2000) });
+      }
+    }
+  });
+
+  splines.push(currentSpline);
+  currentSpline = null;
+  currentColorIndex = (currentColorIndex + 1) % colors.length;
+  return false;
 }
 
 function keyPressed() {
