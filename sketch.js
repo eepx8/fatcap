@@ -1044,7 +1044,7 @@ function drawSpline(spline, fadeAlpha = 255) {
       }
     }
     
-    // Special handling for the first point to ensure it's preserved
+    // Special handling for the first point to ensure it's visible
     const firstPoint = spline.points[0];
     
     // Draw a small line at the first point to ensure it's visible
@@ -1128,11 +1128,11 @@ function drawThicknessMeter() {
   let meterWidth = 150;
   let meterHeight = 40;
   let x = width / 2 - meterWidth / 2;
-  let y = height / 2 - meterHeight / 2;
-  fill(200, 200, 200, 200);
+  let y = 20; // Same position as color meter (top center)
+  fill(22, 22, 22, 255); // #161616 background, fully opaque
   noStroke();
   rect(x, y, meterWidth, meterHeight, 10);
-  fill(22, 22, 22);
+  fill(255, 255, 255); // #fff text
   textSize(16);
   textAlign(CENTER, CENTER);
   textFont("'Plus Jakarta Sans', sans-serif");
@@ -1148,11 +1148,11 @@ function drawColorMeter() {
   let meterWidth = 150;
   let meterHeight = 40;
   let x = width / 2 - meterWidth / 2;
-  let y = 20; // Position at the top of the screen
-  fill(200, 200, 200, 200);
+  let y = 20; // Already at top center
+  fill(22, 22, 22, 255); // #161616 background, fully opaque
   noStroke();
   rect(x, y, meterWidth, meterHeight, 10);
-  fill(22, 22, 22);
+  fill(255, 255, 255); // #fff text
   textSize(16);
   textAlign(CENTER, CENTER);
   textFont("'Plus Jakarta Sans', sans-serif");
