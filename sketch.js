@@ -540,9 +540,23 @@ function updateStartScreenElements() {
     paletteText.style('top', mobileMode ? '67%' : '72%');
   }
   
-  // Update start text if it exists
+  // Update start text if it exists - switch position with palette on mobile
   if (startText && startText.elt) {
-    startText.style('top', mobileMode ? '85%' : '90%');
+    if (mobileMode) {
+      startText.style('top', '60%'); // Above palette on mobile
+    } else {
+      startText.style('top', '90%'); // Below palette on desktop
+    }
+  }
+  
+  // Update palette container if it exists
+  let paletteContainer = select('.palette-container');
+  if (paletteContainer && paletteContainer.elt) {
+    if (mobileMode) {
+      paletteContainer.style('top', '75%'); // Below start text on mobile
+    } else {
+      paletteContainer.style('top', '75%'); // Above start text on desktop
+    }
   }
 
   // Only calculate drip if we're in start screen and not transitioning
@@ -688,59 +702,60 @@ function setupStartScreen() {
 // Function to create palette selection buttons
 function createPaletteButtons(container) {
   const palettes = [
-    { name: "Classic", key: "classic" },
-    { name: "Vibrant", key: "vibrant" },
-    { name: "Comp.", key: "comp" }
+    { name: 'CLASSIC', key: 'classic' },
+    { name: 'VIBRANT', key: 'vibrant' },
+    { name: 'COMP', key: 'comp' }
   ];
-
-  let buttonSize = 60;
-  let spacing = 20;
+  
+  const buttonSize = mobileMode ? 50 : 60;
+  const spacing = mobileMode ? 10 : 20;
+  
   let totalWidth = palettes.length * buttonSize + (palettes.length - 1) * spacing;
-  let startX = (width - totalWidth) / 2;
-  let buttonY = mobileMode ? height * 0.65 : height * 0.7;
-
+  
+  // Clear existing buttons first
+  paletteButtons = [];
+  
   palettes.forEach((palette, index) => {
-    // Create button container
+    // Create container for each button
     let btnContainer = createDiv('')
       .addClass('palette-button-container')
-      .parent(container);
+      .style('opacity', '0') // Start with opacity 0
+      .style('transform', 'scale(0.8)') // Start slightly smaller
+      .style('transition', 'opacity 0.3s ease, transform 0.3s ease'); // Add transition
       
-    // Position the container (using the container's absolute positioning)
-    btnContainer.style('position', 'relative');
-    btnContainer.style('margin', '0 10px');
-    
-    // Style container
-    btnContainer.style('display', 'flex');
-    btnContainer.style('flex-direction', 'column');
-    btnContainer.style('align-items', 'center');
-    btnContainer.style('gap', '5px');
-    
-    // Create button
+    // Create the actual button
     let btn = createButton(palette.name)
       .addClass('palette-button')
-      .parent(btnContainer)
       .mousePressed(() => {
         selectPalette(palette.key);
       });
       
-    // Style the button
-    btn.style('background-color', '#161616');
-    btn.style('color', '#fff');
-    btn.style('border', 'none');
-    btn.style('border-radius', '50%');
-    btn.style('width', buttonSize + 'px');
-    btn.style('height', buttonSize + 'px');
-    btn.style('font-family', "'Plus Jakarta Sans', sans-serif");
-    btn.style('font-size', '12px');
-    btn.style('cursor', 'pointer');
-    btn.style('z-index', '1000');
-    btn.style('display', 'flex');
-    btn.style('align-items', 'center');
-    btn.style('justify-content', 'center');
-    btn.style('transition', 'transform 0.2s ease, opacity 0.5s ease-in');
+    if (mobileMode) {
+      btn.style('width', '50px');
+      btn.style('height', '50px');
+      btn.style('font-size', '10px');
+    }
     
-    // Add to the array for future reference
+    // Add touch support for the buttons
+    if (btn.elt) {
+      btn.elt.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        console.log("Palette button touchend:", palette.key);
+        selectPalette(palette.key);
+      });
+    }
+    
+    btn.parent(btnContainer);
+    btnContainer.parent(container);
+    
+    // Add to global array for later reference
     paletteButtons.push(btnContainer);
+    
+    // Create a delayed animation for each button
+    setTimeout(() => {
+      btnContainer.style('opacity', '1');
+      btnContainer.style('transform', 'scale(1)');
+    }, 200 + (index * 150)); // Stagger the fade in of each button
   });
 }
 
@@ -2217,6 +2232,9 @@ function closeSaveModal() {
 function saveArtwork() {
   console.log("Saving artwork, mobileMode:", mobileMode);
   
+  // Close the modal first to avoid any overlapping issues
+  closeSaveModal();
+  
   // Create a temporary canvas with a white background
   let saveCanvas = createGraphics(width, height);
   saveCanvas.background(255);
@@ -2299,62 +2317,150 @@ function saveArtwork() {
     }
   }
   
-  // Get the image data
+  // Get the image data URL
   const dataURL = saveCanvas.canvas.toDataURL('image/png');
   
-  // For iOS devices
-  if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-    console.log("iOS device detected, using window.open method");
-    // Show an alert with instructions for iOS users
-    alert('Long press on the image in the next screen and select "Save Image" to save to your gallery');
-    
-    // Open the image in a new tab
-    window.open(dataURL, '_blank');
+  // Detect iOS
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  // Detect Android
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  
+  console.log("Device detection: iOS =", isIOS, "Android =", isAndroid, "Mobile =", mobileMode);
+  
+  if (isIOS) {
+    // iOS approach - create a full-screen image view
+    displayFullScreenImageForSaving(dataURL);
   } 
-  // For other mobile devices
-  else if (mobileMode || /Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-    console.log("Mobile device detected, attempting direct download");
+  else if (mobileMode || isAndroid) {
+    // Create a direct download for Android/other mobile
     try {
-      // Create an anchor element
-      const link = document.createElement('a');
-      link.href = dataURL;
-      link.download = 'FATCAP_ART.png';
-      
-      // Append to body
-      document.body.appendChild(link);
-      
-      // Trigger click
-      link.click();
-      
-      // Remove the link
-      setTimeout(() => {
-        document.body.removeChild(link);
-      }, 100);
-      
-      console.log("Mobile download triggered via link click");
+      // First try using the file system API if available (newer browsers)
+      if (window.showSaveFilePicker) {
+        saveWithFilePicker(dataURL);
+      } else {
+        // Fallback to the traditional method
+        const link = document.createElement('a');
+        document.body.appendChild(link);
+        link.style.display = 'none';
+        
+        // Set the href and download attributes
+        link.href = dataURL;
+        link.download = 'FATCAP_ART.png';
+        
+        // Programmatically click the link to trigger the download
+        link.click();
+        
+        // Clean up
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(dataURL);
+        }, 100);
+      }
     } catch (error) {
-      console.error("Error during mobile download:", error);
-      
-      // Fallback - open in new tab
-      alert('Unable to download directly. The image will open in a new tab. Long press on it and save to your gallery.');
-      window.open(dataURL, '_blank');
+      console.error("Error during save:", error);
+      // Final fallback - display the image full screen
+      displayFullScreenImageForSaving(dataURL);
     }
   } 
-  // For desktop
   else {
-    console.log("Desktop device detected, using p5.js saveCanvas");
-    // Hide credit link first, then show it again after saving
+    // Desktop - use P5's saveCanvas
     if (creditLink) creditLink.style('display', 'none');
     
-    // Desktop saving uses p5.js built-in function
     background(255);
     splines.forEach(spline => drawSpline(spline));
     if (currentSpline) drawSpline(currentSpline);
     saveCanvas('FATCAP_ART', 'png');
     
-    // Show credit link again
     if (creditLink) creditLink.style('display', 'block');
   }
+}
+
+// Function to display a full-screen image that can be saved manually
+function displayFullScreenImageForSaving(dataURL) {
+  console.log("Displaying full screen image for manual saving");
   
-  closeSaveModal();
+  // Create a modal container
+  const saveImageContainer = document.createElement('div');
+  saveImageContainer.style.position = 'fixed';
+  saveImageContainer.style.top = '0';
+  saveImageContainer.style.left = '0';
+  saveImageContainer.style.width = '100%';
+  saveImageContainer.style.height = '100%';
+  saveImageContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+  saveImageContainer.style.display = 'flex';
+  saveImageContainer.style.flexDirection = 'column';
+  saveImageContainer.style.alignItems = 'center';
+  saveImageContainer.style.justifyContent = 'center';
+  saveImageContainer.style.zIndex = '10000';
+  
+  // Create instructions
+  const instructions = document.createElement('div');
+  instructions.style.color = 'white';
+  instructions.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
+  instructions.style.fontSize = '16px';
+  instructions.style.textAlign = 'center';
+  instructions.style.padding = '20px';
+  instructions.style.maxWidth = '90%';
+  instructions.innerText = 'Long press on the image below and select "Save Image"';
+  
+  // Create the image
+  const img = document.createElement('img');
+  img.src = dataURL;
+  img.style.maxWidth = '90%';
+  img.style.maxHeight = '70%';
+  img.style.objectFit = 'contain';
+  img.style.border = '1px solid white';
+  
+  // Create close button
+  const closeBtn = document.createElement('button');
+  closeBtn.innerText = 'Close';
+  closeBtn.style.marginTop = '20px';
+  closeBtn.style.padding = '12px 24px';
+  closeBtn.style.backgroundColor = '#161616';
+  closeBtn.style.color = 'white';
+  closeBtn.style.border = 'none';
+  closeBtn.style.borderRadius = '5px';
+  closeBtn.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
+  closeBtn.style.fontSize = '16px';
+  closeBtn.style.cursor = 'pointer';
+  
+  closeBtn.addEventListener('click', () => {
+    document.body.removeChild(saveImageContainer);
+  });
+  
+  // Add elements to the container
+  saveImageContainer.appendChild(instructions);
+  saveImageContainer.appendChild(img);
+  saveImageContainer.appendChild(closeBtn);
+  
+  // Add the container to the body
+  document.body.appendChild(saveImageContainer);
+}
+
+// Function to use the newer File System Access API for saving
+async function saveWithFilePicker(dataURL) {
+  try {
+    // Request a file handle
+    const handle = await window.showSaveFilePicker({
+      suggestedName: 'FATCAP_ART.png',
+      types: [{
+        description: 'PNG Image',
+        accept: {'image/png': ['.png']}
+      }]
+    });
+    
+    // Convert data URL to blob
+    const blob = await (await fetch(dataURL)).blob();
+    
+    // Create a writable stream and write the blob to it
+    const writable = await handle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    
+    console.log("File saved successfully with File System Access API");
+  } catch (error) {
+    console.error("File System Access API error:", error);
+    // Fallback to displaying the image
+    displayFullScreenImageForSaving(dataURL);
+  }
 }

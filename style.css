@@ -357,6 +357,13 @@ canvas {
     width: 90%; /* Wider on mobile */
   }
   
+  /* Make logo smaller on mobile */
+  .logo-svg {
+    width: 80%;
+    height: auto;
+    margin: 0 auto;
+  }
+  
   .palette-text {
     top: 67%;
     font-size: 0.8rem;
@@ -364,12 +371,12 @@ canvas {
   }
   
   .start-text {
-    top: 85%;
+    top: 60%; /* Position above palette buttons on mobile */
     font-size: 1.1rem;
   }
   
   .palette-container {
-    top: 70%;
+    top: 75%; /* Position below start text on mobile */
     flex-wrap: wrap;
     gap: 10px;
   }
@@ -388,6 +395,11 @@ canvas {
   @media (max-width: 400px) {
     .title {
       width: 90%;
+    }
+    
+    /* Make logo even smaller on very small mobile screens */
+    .logo-svg {
+      width: 70%;
     }
   }
 }
