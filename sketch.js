@@ -2035,7 +2035,7 @@ function closeSaveModal() {
 
 // Function to handle saving artwork
 function saveArtwork() {
-  console.log("Saving artwork with simplified approach");
+  console.log("Saving artwork with improved iOS support");
   
   // Close the modal first
   closeSaveModal();
@@ -2053,10 +2053,57 @@ function saveArtwork() {
     const canvas = document.querySelector('canvas');
     const dataURL = canvas.toDataURL('image/png');
     
-    // iOS requires opening in a new window
-    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-      // Open image in new window where user can save it
-      window.open(dataURL);
+    // Check for iOS devices
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    
+    if (isIOS) {
+      // For iOS devices, create a temporary full-screen image that the user can save
+      console.log("iOS device detected, using alternative save method");
+      
+      // Create a fullscreen overlay
+      const overlay = document.createElement('div');
+      overlay.style.position = 'fixed';
+      overlay.style.top = '0';
+      overlay.style.left = '0';
+      overlay.style.width = '100%';
+      overlay.style.height = '100%';
+      overlay.style.backgroundColor = 'rgba(0,0,0,0.9)';
+      overlay.style.zIndex = '10000';
+      overlay.style.display = 'flex';
+      overlay.style.flexDirection = 'column';
+      overlay.style.alignItems = 'center';
+      overlay.style.justifyContent = 'center';
+      
+      // Create the image
+      const img = document.createElement('img');
+      img.src = dataURL;
+      img.style.maxWidth = '90%';
+      img.style.maxHeight = '70%';
+      img.style.objectFit = 'contain';
+      img.style.border = '10px solid white';
+      
+      // Create text instruction
+      const instruction = document.createElement('div');
+      instruction.innerHTML = 'Touch and hold image to save<br>Tap outside image to cancel';
+      instruction.style.color = 'white';
+      instruction.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
+      instruction.style.textAlign = 'center';
+      instruction.style.marginTop = '20px';
+      instruction.style.padding = '10px';
+      
+      // Add elements to the overlay
+      overlay.appendChild(img);
+      overlay.appendChild(instruction);
+      document.body.appendChild(overlay);
+      
+      // Close when tapping outside the image
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+          document.body.removeChild(overlay);
+          // Show credit link again
+          if (creditLink) creditLink.style('display', 'block');
+        }
+      });
     } else {
       // For other browsers, use download attribute
       const link = document.createElement('a');
@@ -2065,15 +2112,18 @@ function saveArtwork() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      // Show credit link again
+      setTimeout(() => {
+        if (creditLink) creditLink.style('display', 'block');
+      }, 100);
     }
-    
-    // Show credit link again
-    setTimeout(() => {
-      if (creditLink) creditLink.style('display', 'block');
-    }, 100);
   } catch (error) {
     console.error("Error saving artwork:", error);
     alert("Sorry, couldn't save the artwork.");
+    
+    // Show credit link again even if there's an error
+    if (creditLink) creditLink.style('display', 'block');
   }
 }
 
@@ -2092,9 +2142,10 @@ function createMobileControls() {
   controls = [];
   
   let buttonSize = 60;
-  let totalWidth = buttonSize * 5 + 10 * 4; // 5 buttons including save button
+  let totalWidth = buttonSize * 4 + 10 * 3; // 4 buttons without save button
   let startX = (width - totalWidth) / 2;
-  let buttonY = height - 90;
+  // Position the buttons higher up on the screen
+  let buttonY = height - 120; // Changed from height - 90 to height - 120
   
   // Increase thickness button
   let increaseBtn = createButton('+')
@@ -2129,25 +2180,15 @@ function createMobileControls() {
     .addClass('control-button')
     .addClass('icon')
     .style('opacity', '0');
-    
-  // Add back the save button
-  let saveBtn = createButton('arrow_downward')
-    .mousePressed(() => { saveArtwork(); })
-    .position(startX + (buttonSize + 10) * 4, buttonY)
-    .size(buttonSize, buttonSize)
-    .addClass('control-button')
-    .addClass('icon')
-    .style('opacity', '0');
   
   // Add buttons to controls array
-  controls.push(increaseBtn, decreaseBtn, colorBtn, resetBtn, saveBtn);
+  controls.push(increaseBtn, decreaseBtn, colorBtn, resetBtn);
   
   // Add touch event handlers for mobile
   addTouchHandlers(increaseBtn, () => { baseThickness += 20; showThicknessMeter(); });
   addTouchHandlers(decreaseBtn, () => { baseThickness = max(20, baseThickness - 20); showThicknessMeter(); });
   addTouchHandlers(colorBtn, () => { isDrawingBlack = !isDrawingBlack; showColorMeter(); });
   addTouchHandlers(resetBtn, () => { if (splines.length > 0) { startWipeAnimation(); }});
-  addTouchHandlers(saveBtn, () => { saveArtwork(); });
   
   // Fade in the buttons
   setTimeout(() => {
