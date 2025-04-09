@@ -129,20 +129,6 @@ function setup() {
       .style('opacity', '0')
       .mousePressed(toggleHelpModal);
 
-    // Create color toggle button for desktop
-    colorToggleButton = createButton('<span class="icon">invert_colors</span>')
-      .addClass('control-button')
-      .addClass('icon')
-      .position(10, 10)
-      .style('display', 'none')
-      .mousePressed(() => { 
-        isDrawingBlack = !isDrawingBlack; 
-        showColorMeter(); 
-      });
-
-    let iconSpan = select('.icon', helpButton);
-    iconSpan.style('transition', 'opacity 0.2s ease');
-
     overlay = createDiv('')
       .addClass('overlay')
       .style('background-color', 'rgba(0, 0, 0, 0.7)'); // Darker overlay
@@ -477,23 +463,51 @@ function windowResized() {
   mobileMode = windowWidth < 600;
   console.log("Window resized, mobileMode:", mobileMode);
   
-  if (!mobileMode) {
-    if (helpButton) {
-      helpButton.position(width - 70, 10);
+  // Handle changes in mode (desktop/mobile)
+  if (mobileMode !== prevMobileMode) {
+    console.log("Device mode changed from", prevMobileMode ? "mobile" : "desktop", 
+                "to", mobileMode ? "mobile" : "desktop");
+                
+    // Clear all existing controls and recreate appropriate ones
+    controls.forEach(control => control.remove());
+    controls = [];
+    
+    if (mobileMode && !startScreen) {
+      // Switching to mobile mode outside start screen
+      createMobileControls();
+      
+      // Hide desktop controls
+      if (helpButton) {
+        helpButton.style('opacity', '0');
+        helpButton.style('display', 'none');
+      }
+    } else if (!mobileMode && !startScreen) {
+      // Switching to desktop mode outside start screen
+      // Show desktop controls
+      if (helpButton) {
+        helpButton.style('display', 'flex');
+        helpButton.style('opacity', '1');
+        helpButton.position(width - 70, 10);
+      }
     }
-    if (colorToggleButton) {
-      colorToggleButton.position(10, 10);
+  } else {
+    // If staying in same mode, only reposition controls
+    if (!mobileMode) {
+      if (helpButton) {
+        helpButton.position(width - 70, 10);
+      }
+    } else if (mobileMode && !startScreen) {
+      // Recreate mobile controls to ensure proper positioning
+      createMobileControls();
     }
   }
   
   // Update credit link position
   updateCreditLinkPosition();
   
-  // Only update elements if they exist and we're in start screen
+  // Update start screen elements if in start screen
   if ((startScreen || startTime) && title && title.elt) {
     updateStartScreenElements();
-    
-    // No need to reposition palette buttons as they use flexbox in the container now
   }
   
   // Only reset to start screen if switching from desktop to mobile
@@ -707,8 +721,8 @@ function createPaletteButtons(container) {
     { name: 'COMP', key: 'comp' }
   ];
   
-  const buttonSize = mobileMode ? 50 : 60;
-  const spacing = mobileMode ? 10 : 20;
+  const buttonSize = mobileMode ? 60 : 60; // Same size for both mobile and desktop now
+  const spacing = mobileMode ? 15 : 20;
   
   let totalWidth = palettes.length * buttonSize + (palettes.length - 1) * spacing;
   
@@ -731,9 +745,15 @@ function createPaletteButtons(container) {
       });
       
     if (mobileMode) {
-      btn.style('width', '50px');
-      btn.style('height', '50px');
-      btn.style('font-size', '10px');
+      btn.style('width', '60px'); // Larger size on mobile
+      btn.style('height', '60px');
+      btn.style('font-size', '11px');
+      
+      // Handle very small screens
+      if (windowWidth < 400) {
+        btn.style('width', '55px');
+        btn.style('height', '55px');
+      }
     }
     
     // Add touch support for the buttons
@@ -795,271 +815,63 @@ function fadeOutStartScreen() {
     console.log("Randomly selected palette:", selectedPalette);
   }
   
-  // Fade out elements
-  if (subtitle && subtitle.elt) subtitle.style('opacity', '0');
-  if (startText && startText.elt) startText.style('opacity', '0');
-  
-  // Fade out palette containers
-  const paletteContainer = select('.palette-container');
-  if (paletteContainer && paletteContainer.elt) {
-    paletteContainer.style('opacity', '0');
-  }
+  if (subtitle) subtitle.style('opacity', '0');
+  if (startText) startText.style('opacity', '0');
+  startTime = millis();
+  isFadingOut = true;
+  fadeOutProgress = 0;
+  drip = null;
   
   // Clear blink interval
   if (blinkInterval) {
     clearInterval(blinkInterval);
     blinkInterval = null;
   }
-  
-  // Reset any existing spline to prevent large initial splines
-  currentSpline = null;
-  
-  startTime = millis();
-  isFadingOut = true;
-  fadeOutProgress = 0;
-  drip = null;
 
   if (mobileMode) {
-    console.log("Creating mobile controls");
+    // Use the mobile controls function
+    createMobileControls();
     
-    // Remove any existing controls first
-    controls.forEach(control => control.remove());
-    controls = [];
-    
-    let buttonSize = 60;
-    let totalWidth = buttonSize * 5 + 10 * 4;
-    let startX = (width - totalWidth) / 2;
-    
-    // Position buttons higher up from the bottom to avoid system UI overlaps
-    let buttonY = height - 120;
-    
-    // Ensure buttons are within the visible area
-    if (buttonY + buttonSize > height - 20) {
-      buttonY = height - buttonSize - 20;
-    }
-    
-    console.log(`Positioning mobile buttons at Y: ${buttonY}, screen height: ${height}`);
-
-    // Create increase thickness button
-    let increaseBtn = createButton('+')
-      .addClass('control-button')
-      .position(startX, buttonY);
-    
-    // Make buttons more visible for debugging
-    increaseBtn.style('z-index', '1000');
-    increaseBtn.style('opacity', '1'); // Make immediately visible
-    increaseBtn.style('font-size', '28px'); // Larger text
-    increaseBtn.style('font-weight', 'bold'); // Bolder text
-    
-    // Add both mouse and touch handlers
-    increaseBtn.mousePressed(() => { 
-      console.log("Increase thickness button pressed");
-      baseThickness += 20; 
-      showThicknessMeter(); 
-    });
-    
-    // Add touch event listeners directly to the DOM element
-    if (increaseBtn.elt) {
-      increaseBtn.elt.addEventListener('touchstart', (e) => {
-        console.log("Increase thickness button touchstart");
-      }, false);
-      
-      increaseBtn.elt.addEventListener('touchend', (e) => {
-        console.log("Increase thickness button touchend");
-        e.preventDefault();
-        baseThickness += 20;
-        showThicknessMeter();
-      }, false);
-    }
-    
-    controls.push(increaseBtn);
-
-    // Create decrease thickness button
-    let decreaseBtn = createButton('-')
-      .addClass('control-button')
-      .position(startX + buttonSize + 10, buttonY);
-    
-    // Make buttons more visible for debugging
-    decreaseBtn.style('z-index', '1000');
-    decreaseBtn.style('opacity', '1'); // Make immediately visible
-    decreaseBtn.style('font-size', '28px'); // Larger text
-    decreaseBtn.style('font-weight', 'bold'); // Bolder text
-    
-    decreaseBtn.mousePressed(() => { 
-      console.log("Decrease thickness button pressed");
-      baseThickness = max(20, baseThickness - 20); 
-      showThicknessMeter(); 
-    });
-    
-    // Add touch event listeners
-    if (decreaseBtn.elt) {
-      decreaseBtn.elt.addEventListener('touchstart', (e) => {
-        console.log("Decrease thickness button touchstart");
-      }, false);
-      
-      decreaseBtn.elt.addEventListener('touchend', (e) => {
-        console.log("Decrease thickness button touchend");
-        e.preventDefault();
-        baseThickness = max(20, baseThickness - 20);
-        showThicknessMeter();
-      }, false);
-    }
-    
-    controls.push(decreaseBtn);
-
-    // Create color toggle button
-    let colorBtn = createButton('invert_colors')
-      .addClass('control-button')
-      .addClass('icon')
-      .position(startX + (buttonSize + 10) * 2, buttonY);
-    
-    // Make buttons more visible for debugging
-    colorBtn.style('z-index', '1000');
-    colorBtn.style('opacity', '1'); // Make immediately visible
-    colorBtn.style('font-size', '28px'); // Larger icon
-    
-    colorBtn.mousePressed(() => { 
-      console.log("Color toggle button pressed");
-      isDrawingBlack = !isDrawingBlack; 
-      showColorMeter(); 
-    });
-    
-    // Add touch event listeners
-    if (colorBtn.elt) {
-      colorBtn.elt.addEventListener('touchstart', (e) => {
-        console.log("Color toggle button touchstart");
-      }, false);
-      
-      colorBtn.elt.addEventListener('touchend', (e) => {
-        console.log("Color toggle button touchend");
-        e.preventDefault();
-        isDrawingBlack = !isDrawingBlack;
-        showColorMeter();
-      }, false);
-    }
-    
-    controls.push(colorBtn);
-
-    // Create reset button
-    let resetBtn = createButton('restart_alt')
-      .addClass('control-button')
-      .addClass('icon')
-      .position(startX + (buttonSize + 10) * 3, buttonY);
-    
-    // Make buttons more visible for debugging
-    resetBtn.style('z-index', '1000');
-    resetBtn.style('opacity', '1'); // Make immediately visible
-    resetBtn.style('font-size', '28px'); // Larger icon
-    
-    resetBtn.mousePressed(() => { 
-      console.log("Reset button pressed");
-      if (splines.length > 0) { 
-        startWipeAnimation();
-      }
-    });
-    
-    // Add touch event listeners
-    if (resetBtn.elt) {
-      resetBtn.elt.addEventListener('touchstart', (e) => {
-        console.log("Reset button touchstart");
-      }, false);
-      
-      resetBtn.elt.addEventListener('touchend', (e) => {
-        console.log("Reset button touchend");
-        e.preventDefault();
-        if (splines.length > 0) {
-          startWipeAnimation();
-        }
-      }, false);
-    }
-    
-    controls.push(resetBtn);
-
-    // Create save button for mobile 
-    let saveBtn = createButton('arrow_downward')
-      .addClass('control-button')
-      .addClass('icon')
-      .position(startX + (buttonSize + 10) * 4, buttonY);
-
-    // Make buttons more visible for debugging
-    saveBtn.style('z-index', '1000');
-    saveBtn.style('opacity', '1'); // Make immediately visible
-    saveBtn.style('font-size', '28px'); // Larger icon
-
-    saveBtn.mousePressed(() => {
-      console.log("Save button pressed");
-      if (!mobileMode) {
-        background(255);
-        splines.forEach(spline => drawSpline(spline));
-        if (currentSpline) drawSpline(currentSpline);
-        saveCanvas('FATCAP_ART', 'png');
-      } else {
-        // Show save modal on mobile too
-        showSaveModal();
-      }
-    });
-
-    // Add touch event listeners
-    if (saveBtn.elt) {
-      saveBtn.elt.addEventListener('touchstart', (e) => {
-        console.log("Save button touchstart");
-      }, false);
-      
-      saveBtn.elt.addEventListener('touchend', (e) => {
-        console.log("Save button touchend");
-        e.preventDefault();
-        // Show save modal instead of directly saving
-        showSaveModal();
-      }, false);
-    }
-
-    controls.push(saveBtn);
-
-    // No need for fade-in since we're making them immediately visible
-    console.log("Mobile controls created and visible");
+    // Hide desktop controls if they exist
+    if (helpButton) helpButton.style('opacity', '0');
   } else {
-    // No need to show color toggle button on desktop - hide it instead
-    if (colorToggleButton) {
-      colorToggleButton.style('display', 'none');
-    }
+    // Show desktop controls
+    console.log("Showing desktop controls");
+    if (helpButton) helpButton.style('opacity', '1');
   }
 
   setTimeout(() => {
-    if (subtitle && subtitle.elt) subtitle.remove();
-    if (startText && startText.elt) startText.remove();
+    if (subtitle) subtitle.remove();
+    if (startText) startText.remove();
     
-    // Remove palette container
+    // Fade out palette containers
+    const paletteContainer = select('.palette-container');
     if (paletteContainer && paletteContainer.elt) {
-      paletteContainer.remove();
+      paletteContainer.style('opacity', '0');
+      setTimeout(() => {
+        paletteContainer.remove();
+      }, 500);
     }
+    
     // Clear palette buttons array
     paletteButtons = [];
     
     setTimeout(() => {
-      if (title && title.elt) {
-        title.style('opacity', '0');
-        setTimeout(() => {
-          startScreen = false;
-          isFadingOut = false;
-          if (title && title.elt) title.remove();
-          if (!mobileMode) {
-            if (helpButton) {
-              helpButton.style('display', 'block');
-              helpButton.style('opacity', '0');
-              setTimeout(() => {
-                helpButton.style('opacity', '1');
-                helpButton.style('transition', 'opacity 0.5s ease');
-              }, 10);
-            }
-          }
-          console.log("Start screen faded out, startScreen:", startScreen);
-        }, 500);
-      }
-    }, 3000);
+      if (title) title.style('opacity', '0');
+      setTimeout(() => {
+        startScreen = false;
+        isFadingOut = false;
+        if (title) title.remove();
+        if (!mobileMode) {
+          if (helpButton) helpButton.style('display', 'flex');
+        }
+        console.log("Start screen faded out, startScreen:", startScreen);
+      }, 500);
+    }, 500);
   }, 300);
 }
 
-// New function to create wipe animation
+// Function to create wipe animation
 function startWipeAnimation() {
   console.log("Starting wipe animation");
   // Create a wipe animation that sweeps across the canvas
@@ -1091,7 +903,7 @@ function resetToStartScreen() {
   isFadingOut = false;
   drip = null;
   startTime = null;
-  wipeAnimation = null; // Clear wipe animation if it exists
+  wipeAnimation = null;
   
   // Reset palette selection
   selectedPalette = null;
@@ -1103,7 +915,7 @@ function resetToStartScreen() {
     blinkInterval = null;
   }
 
-  // Remove all controls
+  // Clear any existing controls
   controls.forEach(control => control.remove());
   controls = [];
   
@@ -1117,37 +929,30 @@ function resetToStartScreen() {
   // Remove any existing text elements
   if (startText && startText.elt) startText.remove();
 
-  // Remove any existing DOM-based meters (from previous implementation)
-  let thicknessMeterElement = select('.thickness-meter');
-  if (thicknessMeterElement) thicknessMeterElement.remove();
-  
-  let colorMeterElement = select('.color-meter');
-  if (colorMeterElement) colorMeterElement.remove();
-
   // Hide desktop UI elements
-  if (!mobileMode) {
-    if (helpButton) helpButton.style('display', 'none');
-    if (colorToggleButton) colorToggleButton.style('display', 'none');
-    if (helpModal) {
-      helpModal.style('display', 'none');
-      helpModal.style('opacity', '0');
-    }
-    if (saveModal) {
-      saveModal.style('display', 'none');
-      saveModal.style('opacity', '0');
-    }
-    if (overlay) {
-      overlay.style('display', 'none');
-      overlay.style('opacity', '0');
-    }
-    isModalOpen = false; // Reset modal open flag
+  if (helpButton) {
+    helpButton.style('display', 'none');
+    helpButton.style('opacity', '0');
   }
+  if (helpModal) {
+    helpModal.style('display', 'none');
+    helpModal.style('opacity', '0');
+  }
+  if (saveModal) {
+    saveModal.style('display', 'none');
+    saveModal.style('opacity', '0');
+  }
+  if (overlay) {
+    overlay.style('display', 'none');
+    overlay.style('opacity', '0');
+  }
+  isModalOpen = false; // Reset modal open flag
 
-  // Set new background color
+  // Reset background color
   startScreenColor = colors[floor(random(colors.length))];
   background(startScreenColor);
 
-  // Reset state and setup start screen
+  // Reset to start screen state
   startScreen = true;
   setupStartScreen();
 }
@@ -2230,237 +2035,138 @@ function closeSaveModal() {
 
 // Function to handle saving artwork
 function saveArtwork() {
-  console.log("Saving artwork, mobileMode:", mobileMode);
+  console.log("Saving artwork with simplified approach");
   
-  // Close the modal first to avoid any overlapping issues
+  // Close the modal first
   closeSaveModal();
   
-  // Create a temporary canvas with a white background
-  let saveCanvas = createGraphics(width, height);
-  saveCanvas.background(255);
-  
-  // Draw all splines to this canvas
-  splines.forEach(spline => {
-    let thicknessToUse = spline.baseThickness;
-    let colorToUse = spline.color;
-    
-    if (red(spline.color) === 22 && green(spline.color) === 22 && blue(spline.color) === 22) {
-      thicknessToUse *= 0.5;
-    }
-    
-    // Set stroke properties
-    saveCanvas.stroke(red(colorToUse), green(colorToUse), blue(colorToUse));
-    saveCanvas.noFill();
-    saveCanvas.strokeWeight(thicknessToUse);
-    saveCanvas.strokeCap(ROUND);
-    saveCanvas.strokeJoin(ROUND);
-    
-    // Draw the spline
-    if (spline.points && spline.points.length > 0) {
-      if (spline.points.length === 1) {
-        saveCanvas.point(spline.points[0].x, spline.points[0].y);
-      } else {
-        saveCanvas.beginShape();
-        saveCanvas.curveVertex(spline.points[0].x, spline.points[0].y);
-        saveCanvas.curveVertex(spline.points[0].x, spline.points[0].y);
-        
-        for (let i = 1; i < spline.points.length; i++) {
-          saveCanvas.curveVertex(spline.points[i].x, spline.points[i].y);
-        }
-        
-        const lastPt = spline.points[spline.points.length - 1];
-        saveCanvas.curveVertex(lastPt.x, lastPt.y);
-        saveCanvas.endShape();
-      }
-    }
-    
-    // Draw drips
-    if (spline.verticalLines && spline.verticalLines.length > 0) {
-      spline.verticalLines.forEach(vl => {
-        saveCanvas.strokeWeight(vl.thickness);
-        saveCanvas.line(vl.x, vl.y, vl.x, vl.targetY);
-      });
-    }
-  });
-  
-  // Also draw current spline if it exists
-  if (currentSpline) {
-    let thicknessToUse = currentSpline.baseThickness;
-    let colorToUse = currentSpline.color;
-    
-    if (red(currentSpline.color) === 22 && green(currentSpline.color) === 22 && blue(currentSpline.color) === 22) {
-      thicknessToUse *= 0.5;
-    }
-    
-    saveCanvas.stroke(red(colorToUse), green(colorToUse), blue(colorToUse));
-    saveCanvas.noFill();
-    saveCanvas.strokeWeight(thicknessToUse);
-    saveCanvas.strokeCap(ROUND);
-    saveCanvas.strokeJoin(ROUND);
-    
-    if (currentSpline.points && currentSpline.points.length > 0) {
-      if (currentSpline.points.length === 1) {
-        saveCanvas.point(currentSpline.points[0].x, currentSpline.points[0].y);
-      } else {
-        saveCanvas.beginShape();
-        saveCanvas.curveVertex(currentSpline.points[0].x, currentSpline.points[0].y);
-        saveCanvas.curveVertex(currentSpline.points[0].x, currentSpline.points[0].y);
-        
-        for (let i = 1; i < currentSpline.points.length; i++) {
-          saveCanvas.curveVertex(currentSpline.points[i].x, currentSpline.points[i].y);
-        }
-        
-        const lastPt = currentSpline.points[currentSpline.points.length - 1];
-        saveCanvas.curveVertex(lastPt.x, lastPt.y);
-        saveCanvas.endShape();
-      }
-    }
-  }
-  
-  // Get the image data URL
-  const dataURL = saveCanvas.canvas.toDataURL('image/png');
-  
-  // Detect iOS
-  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  // Detect Android
-  const isAndroid = /Android/i.test(navigator.userAgent);
-  
-  console.log("Device detection: iOS =", isIOS, "Android =", isAndroid, "Mobile =", mobileMode);
-  
-  if (isIOS) {
-    // iOS approach - create a full-screen image view
-    displayFullScreenImageForSaving(dataURL);
-  } 
-  else if (mobileMode || isAndroid) {
-    // Create a direct download for Android/other mobile
-    try {
-      // First try using the file system API if available (newer browsers)
-      if (window.showSaveFilePicker) {
-        saveWithFilePicker(dataURL);
-      } else {
-        // Fallback to the traditional method
-        const link = document.createElement('a');
-        document.body.appendChild(link);
-        link.style.display = 'none';
-        
-        // Set the href and download attributes
-        link.href = dataURL;
-        link.download = 'FATCAP_ART.png';
-        
-        // Programmatically click the link to trigger the download
-        link.click();
-        
-        // Clean up
-        setTimeout(() => {
-          document.body.removeChild(link);
-          URL.revokeObjectURL(dataURL);
-        }, 100);
-      }
-    } catch (error) {
-      console.error("Error during save:", error);
-      // Final fallback - display the image full screen
-      displayFullScreenImageForSaving(dataURL);
-    }
-  } 
-  else {
-    // Desktop - use P5's saveCanvas
-    if (creditLink) creditLink.style('display', 'none');
-    
+  try {
+    // Draw elements to the main canvas with white background
     background(255);
     splines.forEach(spline => drawSpline(spline));
     if (currentSpline) drawSpline(currentSpline);
-    saveCanvas('FATCAP_ART', 'png');
     
-    if (creditLink) creditLink.style('display', 'block');
+    // Hide credit link temporarily
+    if (creditLink) creditLink.style('display', 'none');
+    
+    // Create download link using the canvas data
+    const canvas = document.querySelector('canvas');
+    const dataURL = canvas.toDataURL('image/png');
+    
+    // iOS requires opening in a new window
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      // Open image in new window where user can save it
+      window.open(dataURL);
+    } else {
+      // For other browsers, use download attribute
+      const link = document.createElement('a');
+      link.href = dataURL;
+      link.download = 'FATCAP_ART.png';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    // Show credit link again
+    setTimeout(() => {
+      if (creditLink) creditLink.style('display', 'block');
+    }, 100);
+  } catch (error) {
+    console.error("Error saving artwork:", error);
+    alert("Sorry, couldn't save the artwork.");
   }
 }
 
-// Function to display a full-screen image that can be saved manually
-function displayFullScreenImageForSaving(dataURL) {
-  console.log("Displaying full screen image for manual saving");
+// Function to create mobile controls with the download button added back
+function createMobileControls() {
+  console.log("Creating mobile controls");
   
-  // Create a modal container
-  const saveImageContainer = document.createElement('div');
-  saveImageContainer.style.position = 'fixed';
-  saveImageContainer.style.top = '0';
-  saveImageContainer.style.left = '0';
-  saveImageContainer.style.width = '100%';
-  saveImageContainer.style.height = '100%';
-  saveImageContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
-  saveImageContainer.style.display = 'flex';
-  saveImageContainer.style.flexDirection = 'column';
-  saveImageContainer.style.alignItems = 'center';
-  saveImageContainer.style.justifyContent = 'center';
-  saveImageContainer.style.zIndex = '10000';
+  // Check that we're actually on mobile
+  if (!mobileMode) {
+    console.log("Skipping mobile controls on desktop");
+    return;
+  }
   
-  // Create instructions
-  const instructions = document.createElement('div');
-  instructions.style.color = 'white';
-  instructions.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
-  instructions.style.fontSize = '16px';
-  instructions.style.textAlign = 'center';
-  instructions.style.padding = '20px';
-  instructions.style.maxWidth = '90%';
-  instructions.innerText = 'Long press on the image below and select "Save Image"';
+  // Remove any existing controls first
+  controls.forEach(control => control.remove());
+  controls = [];
   
-  // Create the image
-  const img = document.createElement('img');
-  img.src = dataURL;
-  img.style.maxWidth = '90%';
-  img.style.maxHeight = '70%';
-  img.style.objectFit = 'contain';
-  img.style.border = '1px solid white';
+  let buttonSize = 60;
+  let totalWidth = buttonSize * 5 + 10 * 4; // 5 buttons including save button
+  let startX = (width - totalWidth) / 2;
+  let buttonY = height - 90;
   
-  // Create close button
-  const closeBtn = document.createElement('button');
-  closeBtn.innerText = 'Close';
-  closeBtn.style.marginTop = '20px';
-  closeBtn.style.padding = '12px 24px';
-  closeBtn.style.backgroundColor = '#161616';
-  closeBtn.style.color = 'white';
-  closeBtn.style.border = 'none';
-  closeBtn.style.borderRadius = '5px';
-  closeBtn.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
-  closeBtn.style.fontSize = '16px';
-  closeBtn.style.cursor = 'pointer';
+  // Increase thickness button
+  let increaseBtn = createButton('+')
+    .mousePressed(() => { baseThickness += 20; showThicknessMeter(); })
+    .position(startX, buttonY)
+    .size(buttonSize, buttonSize)
+    .addClass('control-button')
+    .style('opacity', '0');
+    
+  // Decrease thickness button
+  let decreaseBtn = createButton('-')
+    .mousePressed(() => { baseThickness = max(20, baseThickness - 20); showThicknessMeter(); })
+    .position(startX + buttonSize + 10, buttonY)
+    .size(buttonSize, buttonSize)
+    .addClass('control-button')
+    .style('opacity', '0');
+    
+  // Color toggle button
+  let colorBtn = createButton('invert_colors')
+    .mousePressed(() => { isDrawingBlack = !isDrawingBlack; showColorMeter(); })
+    .position(startX + (buttonSize + 10) * 2, buttonY)
+    .size(buttonSize, buttonSize)
+    .addClass('control-button')
+    .addClass('icon')
+    .style('opacity', '0');
+    
+  // Reset button
+  let resetBtn = createButton('restart_alt')
+    .mousePressed(() => { if (splines.length > 0) { startWipeAnimation(); }})
+    .position(startX + (buttonSize + 10) * 3, buttonY)
+    .size(buttonSize, buttonSize)
+    .addClass('control-button')
+    .addClass('icon')
+    .style('opacity', '0');
+    
+  // Add back the save button
+  let saveBtn = createButton('arrow_downward')
+    .mousePressed(() => { saveArtwork(); })
+    .position(startX + (buttonSize + 10) * 4, buttonY)
+    .size(buttonSize, buttonSize)
+    .addClass('control-button')
+    .addClass('icon')
+    .style('opacity', '0');
   
-  closeBtn.addEventListener('click', () => {
-    document.body.removeChild(saveImageContainer);
-  });
+  // Add buttons to controls array
+  controls.push(increaseBtn, decreaseBtn, colorBtn, resetBtn, saveBtn);
   
-  // Add elements to the container
-  saveImageContainer.appendChild(instructions);
-  saveImageContainer.appendChild(img);
-  saveImageContainer.appendChild(closeBtn);
+  // Add touch event handlers for mobile
+  addTouchHandlers(increaseBtn, () => { baseThickness += 20; showThicknessMeter(); });
+  addTouchHandlers(decreaseBtn, () => { baseThickness = max(20, baseThickness - 20); showThicknessMeter(); });
+  addTouchHandlers(colorBtn, () => { isDrawingBlack = !isDrawingBlack; showColorMeter(); });
+  addTouchHandlers(resetBtn, () => { if (splines.length > 0) { startWipeAnimation(); }});
+  addTouchHandlers(saveBtn, () => { saveArtwork(); });
   
-  // Add the container to the body
-  document.body.appendChild(saveImageContainer);
+  // Fade in the buttons
+  setTimeout(() => {
+    controls.forEach(control => control.style('opacity', '1'));
+  }, 10);
 }
 
-// Function to use the newer File System Access API for saving
-async function saveWithFilePicker(dataURL) {
-  try {
-    // Request a file handle
-    const handle = await window.showSaveFilePicker({
-      suggestedName: 'FATCAP_ART.png',
-      types: [{
-        description: 'PNG Image',
-        accept: {'image/png': ['.png']}
-      }]
+// Helper function to add touch handlers to mobile buttons
+function addTouchHandlers(button, callback) {
+  if (button.elt) {
+    button.elt.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      console.log("Button touchstart");
     });
     
-    // Convert data URL to blob
-    const blob = await (await fetch(dataURL)).blob();
-    
-    // Create a writable stream and write the blob to it
-    const writable = await handle.createWritable();
-    await writable.write(blob);
-    await writable.close();
-    
-    console.log("File saved successfully with File System Access API");
-  } catch (error) {
-    console.error("File System Access API error:", error);
-    // Fallback to displaying the image
-    displayFullScreenImageForSaving(dataURL);
+    button.elt.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      console.log("Button touchend");
+      callback();
+    });
   }
 }

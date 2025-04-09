@@ -372,7 +372,8 @@ canvas {
   
   .start-text {
     top: 60%; /* Position above palette buttons on mobile */
-    font-size: 1.1rem;
+    font-size: 0.9rem; /* Smaller font size on mobile */
+    letter-spacing: 3px; /* Slightly tighter letter spacing */
   }
   
   .palette-container {
@@ -386,9 +387,9 @@ canvas {
   }
   
   .palette-button {
-    width: 50px;
-    height: 50px;
-    font-size: 10px;
+    width: 60px; /* Larger size on mobile */
+    height: 60px; /* Larger size on mobile */
+    font-size: 11px;
   }
   
   /* Title width responsive adjustments */
@@ -400,6 +401,16 @@ canvas {
     /* Make logo even smaller on very small mobile screens */
     .logo-svg {
       width: 70%;
+    }
+    
+    .start-text {
+      font-size: 0.8rem; /* Even smaller on very small screens */
+      letter-spacing: 2px;
+    }
+    
+    .palette-button {
+      width: 55px; /* Still larger but slightly smaller for very small screens */
+      height: 55px;
     }
   }
 }
