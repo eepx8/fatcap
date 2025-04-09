@@ -387,87 +387,32 @@ function setup() {
     // Add event listeners for save modal
     select('#cancelSave', saveModal).mousePressed(closeSaveModal);
     select('#confirmSave', saveModal).mousePressed(() => {
-      if (mobileMode) {
-        // For mobile, we need to use a different approach to save to gallery
-        // Create a temporary canvas with a white background
-        let saveCanvas = createGraphics(width, height);
-        saveCanvas.background(255);
-        
-        // Draw all splines to this canvas
-        splines.forEach(spline => {
-          let thicknessToUse = spline.baseThickness;
-          let colorToUse = spline.color;
-          
-          if (red(spline.color) === 22 && green(spline.color) === 22 && blue(spline.color) === 22) {
-            thicknessToUse *= 0.5;
-          }
-          
-          // Set stroke properties
-          saveCanvas.stroke(red(colorToUse), green(colorToUse), blue(colorToUse));
-          saveCanvas.noFill();
-          saveCanvas.strokeWeight(thicknessToUse);
-          saveCanvas.strokeCap(ROUND);
-          saveCanvas.strokeJoin(ROUND);
-          
-          // Draw the spline
-          if (spline.points && spline.points.length > 0) {
-            if (spline.points.length === 1) {
-              saveCanvas.point(spline.points[0].x, spline.points[0].y);
-            } else {
-              saveCanvas.beginShape();
-              saveCanvas.curveVertex(spline.points[0].x, spline.points[0].y);
-              saveCanvas.curveVertex(spline.points[0].x, spline.points[0].y);
-              
-              for (let i = 1; i < spline.points.length; i++) {
-                saveCanvas.curveVertex(spline.points[i].x, spline.points[i].y);
-              }
-              
-              const lastPt = spline.points[spline.points.length - 1];
-              saveCanvas.curveVertex(lastPt.x, lastPt.y);
-              saveCanvas.endShape();
-            }
-          }
-          
-          // Draw drips
-          if (spline.verticalLines && spline.verticalLines.length > 0) {
-            spline.verticalLines.forEach(vl => {
-              saveCanvas.strokeWeight(vl.thickness);
-              saveCanvas.line(vl.x, vl.y, vl.x, vl.targetY);
-            });
-          }
-        });
-        
-        // Create a link element to trigger download
-        let link = document.createElement('a');
-        link.href = saveCanvas.canvas.toDataURL('image/png');
-        link.download = 'FATCAP_ART.png';
-        
-        // For mobile Safari/iOS, we need to handle this differently
-        if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-          // Show an alert with instructions for iOS users
-          alert('Long press on the image in the next screen and select "Save Image" to save to your gallery');
-          
-          // Open the image in a new tab
-          window.open(link.href, '_blank');
-        } else {
-          // For Android and other mobile browsers
-          link.click();
-        }
-      } else {
-        // Desktop saving - hide credit link first, then show it again after saving
-        if (creditLink) creditLink.style('display', 'none');
-        
-        // Desktop saving works as before
-        background(255);
-        splines.forEach(spline => drawSpline(spline));
-        if (currentSpline) drawSpline(currentSpline);
-        saveCanvas('FATCAP_ART', 'png');
-        
-        // Show credit link again
-        if (creditLink) creditLink.style('display', 'block');
-      }
-      
+      saveArtwork();
+    });
+
+    // Add touchend handler for mobile devices
+    select('#confirmSave', saveModal).elt.addEventListener('touchend', (e) => {
+      e.preventDefault(); // Prevent default behavior
+      console.log("Save button touchend in modal");
+      saveArtwork();
+    });
+
+    // Also add touchstart handler to prevent any default browser behavior
+    select('#confirmSave', saveModal).elt.addEventListener('touchstart', (e) => {
+      e.preventDefault(); // Prevent default behavior
+      console.log("Save button touchstart in modal");
+    });
+
+    // Add touch events to cancel button too
+    select('#cancelSave', saveModal).elt.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      console.log("Cancel save button touchend");
       closeSaveModal();
+    });
+
+    select('#cancelSave', saveModal).elt.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      console.log("Cancel save button touchstart");
     });
 
     select('#closeModal', helpModal).mousePressed(closeHelpModal);
@@ -481,6 +426,8 @@ function setup() {
   creditLink.style('font-size', '14px');
   creditLink.style('text-decoration', 'underline');
   creditLink.style('transition', 'opacity 0.3s ease');
+  creditLink.style('pointer-events', 'auto'); // Ensure it's clickable
+  creditLink.style('z-index', '1000'); // Ensure it's above canvas
   
   // Add hover effect
   creditLink.mouseOver(() => {
@@ -490,6 +437,20 @@ function setup() {
   creditLink.mouseOut(() => {
     creditLink.style('opacity', '1');
   });
+  
+  // Add touch events for mobile
+  if (creditLink.elt) {
+    creditLink.elt.addEventListener('touchstart', (e) => {
+      console.log("Credit link touchstart");
+      creditLink.style('opacity', '0.7');
+    });
+    
+    creditLink.elt.addEventListener('touchend', (e) => {
+      console.log("Credit link touchend");
+      creditLink.style('opacity', '1');
+      window.open('https://px8.fi', '_blank');
+    });
+  }
   
   // Set initial position based on screen size
   updateCreditLinkPosition();
@@ -566,8 +527,12 @@ function updateStartScreenElements() {
     subtitle.style('margin-bottom', mobileMode ? '5px' : '60px');
   }
   
-  // Update title position
-  title.style('top', '50%');
+  // Update title position - move up on mobile
+  if (mobileMode) {
+    title.style('top', '45%'); // Move up slightly on mobile
+  } else {
+    title.style('top', '50%');
+  }
   title.style('margin-bottom', mobileMode ? '5px' : '60px');
   
   // Update palette text if it exists
@@ -2088,17 +2053,32 @@ function showSaveModal() {
       if (saveButtons) {
         saveButtons.style('flex-direction', mobileMode ? 'column-reverse' : 'row'); // reverse order on mobile
         saveButtons.style('gap', mobileMode ? '15px' : '20px');
+        saveButtons.style('width', '100%');
       }
       
-      // Make buttons larger on mobile for easier tapping, but with smaller text
+      // Make buttons larger on mobile for easier tapping
       let modalButtons = selectAll('.modal-button', saveModalContent);
       modalButtons.forEach(btn => {
         if (mobileMode) {
           btn.style('padding', '16px 24px');
-          btn.style('font-size', '14px');
+          btn.style('font-size', '16px');
           btn.style('width', '100%');
+          btn.style('margin', '0');
+          btn.style('border-radius', '8px');
+          btn.style('-webkit-tap-highlight-color', 'rgba(0,0,0,0)');
+          btn.style('user-select', 'none');
+          btn.style('-webkit-user-select', 'none');
         }
       });
+      
+      // Make save button more prominent
+      let confirmButton = select('#confirmSave', saveModalContent);
+      if (confirmButton) {
+        confirmButton.style('background-color', '#161616');
+        confirmButton.style('color', 'white');
+        confirmButton.style('font-weight', 'bold');
+        confirmButton.style('box-shadow', '0 4px 8px rgba(0,0,0,0.2)');
+      }
     }
   }
   
@@ -2231,4 +2211,150 @@ function closeSaveModal() {
     // Show credit link again
     if (creditLink) creditLink.style('display', 'block');
   }, 300);
+}
+
+// Function to handle saving artwork
+function saveArtwork() {
+  console.log("Saving artwork, mobileMode:", mobileMode);
+  
+  // Create a temporary canvas with a white background
+  let saveCanvas = createGraphics(width, height);
+  saveCanvas.background(255);
+  
+  // Draw all splines to this canvas
+  splines.forEach(spline => {
+    let thicknessToUse = spline.baseThickness;
+    let colorToUse = spline.color;
+    
+    if (red(spline.color) === 22 && green(spline.color) === 22 && blue(spline.color) === 22) {
+      thicknessToUse *= 0.5;
+    }
+    
+    // Set stroke properties
+    saveCanvas.stroke(red(colorToUse), green(colorToUse), blue(colorToUse));
+    saveCanvas.noFill();
+    saveCanvas.strokeWeight(thicknessToUse);
+    saveCanvas.strokeCap(ROUND);
+    saveCanvas.strokeJoin(ROUND);
+    
+    // Draw the spline
+    if (spline.points && spline.points.length > 0) {
+      if (spline.points.length === 1) {
+        saveCanvas.point(spline.points[0].x, spline.points[0].y);
+      } else {
+        saveCanvas.beginShape();
+        saveCanvas.curveVertex(spline.points[0].x, spline.points[0].y);
+        saveCanvas.curveVertex(spline.points[0].x, spline.points[0].y);
+        
+        for (let i = 1; i < spline.points.length; i++) {
+          saveCanvas.curveVertex(spline.points[i].x, spline.points[i].y);
+        }
+        
+        const lastPt = spline.points[spline.points.length - 1];
+        saveCanvas.curveVertex(lastPt.x, lastPt.y);
+        saveCanvas.endShape();
+      }
+    }
+    
+    // Draw drips
+    if (spline.verticalLines && spline.verticalLines.length > 0) {
+      spline.verticalLines.forEach(vl => {
+        saveCanvas.strokeWeight(vl.thickness);
+        saveCanvas.line(vl.x, vl.y, vl.x, vl.targetY);
+      });
+    }
+  });
+  
+  // Also draw current spline if it exists
+  if (currentSpline) {
+    let thicknessToUse = currentSpline.baseThickness;
+    let colorToUse = currentSpline.color;
+    
+    if (red(currentSpline.color) === 22 && green(currentSpline.color) === 22 && blue(currentSpline.color) === 22) {
+      thicknessToUse *= 0.5;
+    }
+    
+    saveCanvas.stroke(red(colorToUse), green(colorToUse), blue(colorToUse));
+    saveCanvas.noFill();
+    saveCanvas.strokeWeight(thicknessToUse);
+    saveCanvas.strokeCap(ROUND);
+    saveCanvas.strokeJoin(ROUND);
+    
+    if (currentSpline.points && currentSpline.points.length > 0) {
+      if (currentSpline.points.length === 1) {
+        saveCanvas.point(currentSpline.points[0].x, currentSpline.points[0].y);
+      } else {
+        saveCanvas.beginShape();
+        saveCanvas.curveVertex(currentSpline.points[0].x, currentSpline.points[0].y);
+        saveCanvas.curveVertex(currentSpline.points[0].x, currentSpline.points[0].y);
+        
+        for (let i = 1; i < currentSpline.points.length; i++) {
+          saveCanvas.curveVertex(currentSpline.points[i].x, currentSpline.points[i].y);
+        }
+        
+        const lastPt = currentSpline.points[currentSpline.points.length - 1];
+        saveCanvas.curveVertex(lastPt.x, lastPt.y);
+        saveCanvas.endShape();
+      }
+    }
+  }
+  
+  // Get the image data
+  const dataURL = saveCanvas.canvas.toDataURL('image/png');
+  
+  // For iOS devices
+  if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+    console.log("iOS device detected, using window.open method");
+    // Show an alert with instructions for iOS users
+    alert('Long press on the image in the next screen and select "Save Image" to save to your gallery');
+    
+    // Open the image in a new tab
+    window.open(dataURL, '_blank');
+  } 
+  // For other mobile devices
+  else if (mobileMode || /Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+    console.log("Mobile device detected, attempting direct download");
+    try {
+      // Create an anchor element
+      const link = document.createElement('a');
+      link.href = dataURL;
+      link.download = 'FATCAP_ART.png';
+      
+      // Append to body
+      document.body.appendChild(link);
+      
+      // Trigger click
+      link.click();
+      
+      // Remove the link
+      setTimeout(() => {
+        document.body.removeChild(link);
+      }, 100);
+      
+      console.log("Mobile download triggered via link click");
+    } catch (error) {
+      console.error("Error during mobile download:", error);
+      
+      // Fallback - open in new tab
+      alert('Unable to download directly. The image will open in a new tab. Long press on it and save to your gallery.');
+      window.open(dataURL, '_blank');
+    }
+  } 
+  // For desktop
+  else {
+    console.log("Desktop device detected, using p5.js saveCanvas");
+    // Hide credit link first, then show it again after saving
+    if (creditLink) creditLink.style('display', 'none');
+    
+    // Desktop saving uses p5.js built-in function
+    background(255);
+    splines.forEach(spline => drawSpline(spline));
+    if (currentSpline) drawSpline(currentSpline);
+    saveCanvas('FATCAP_ART', 'png');
+    
+    // Show credit link again
+    if (creditLink) creditLink.style('display', 'block');
+  }
+  
+  closeSaveModal();
 }
