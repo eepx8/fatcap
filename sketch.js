@@ -8,7 +8,17 @@ let paletteText = null;
 let startScreenColor;
 let thicknessMeter = { visible: false, timer: 0, duration: 1000, opacity: 0 };
 let colorMeter = { visible: false, timer: 0, duration: 1000, opacity: 0 };
-let brushSizeOverlay = { visible: false, timer: 0, duration: 1000, opacity: 0 };
+let brushSizeOverlay = { 
+  visible: false, 
+  timer: 0, 
+  duration: 1000, 
+  opacity: 0,
+  targetSize: 0,      // Target size for animation
+  currentSize: 0,     // Current animated size
+  startSize: 0,       // Starting size for animation
+  animationStartTime: 0, // When the animation started
+  bounceAmount: 0.2   // How much to overshoot (20%)
+};
 let isFadingOutCanvas = false;
 let fadeOutCanvasProgress = 0;
 let wipeAnimation = null;
@@ -65,14 +75,14 @@ function setup() {
         color(255, 153, 255),    // Pink
         color(0, 204, 102)       // Green
       ],
-      vibrant: [
+      icecream: [
         color(255, 0, 51),       // Bright red
         color(102, 178, 255),    // Bright blue
         color(0, 255, 128),      // Bright green
         color(255, 204, 0),      // Bright yellow
         color(255, 77, 166)      // Bright pink
       ],
-      comp: [
+      neo: [
         color(0, 255, 255),      // Cyan
         color(255, 102, 0),      // A shade of orange
         color(0, 51, 255),       // A shade of blue
@@ -93,8 +103,8 @@ function setup() {
     // Fallback to basic colors if there's an error
     colorPalettes = {
       classic: [color('#ff0000'), color('#0099ff'), color('#ffcc00'), color('#ff99ff'), color('#00cc66')],
-      vibrant: [color('#ff0033'), color('#66b2ff'), color('#00ff80'), color('#ffcc00'), color('#ff4da6')],
-      comp: [color('#444444'), color('#665233'), color('#2c4a51'), color('#5e4c6a'), color('#42572c')]
+      icecream: [color('#ff0033'), color('#66b2ff'), color('#00ff80'), color('#ffcc00'), color('#ff4da6')],
+      neo: [color('#444444'), color('#665233'), color('#2c4a51'), color('#5e4c6a'), color('#42572c')]
     };
     colors = colorPalettes.classic;
     startScreenColor = colors[floor(random(colors.length))];
@@ -559,7 +569,13 @@ function updateStartScreenElements() {
   
   // Update subtitle if it exists
   if (subtitle && subtitle.elt) {
-    subtitle.style('top', mobileMode ? '25%' : '15%');
+    if (mobileMode) {
+      // Move subtitle much higher on mobile (equal space between top and logo)
+      subtitle.style('top', '10%');
+    } else {
+      // Move subtitle slightly down on desktop
+      subtitle.style('top', '18%');
+    }
     subtitle.style('margin-bottom', mobileMode ? '5px' : '60px');
   }
   
@@ -739,8 +755,8 @@ function setupStartScreen() {
 function createPaletteButtons(container) {
   const palettes = [
     { name: 'Classic', key: 'classic' },
-    { name: 'Vibrant', key: 'vibrant' },
-    { name: 'Comp', key: 'comp' }
+    { name: 'Ice Cream', key: 'icecream' },
+    { name: 'Neo', key: 'neo' }
   ];
   
   const buttonSize = mobileMode ? 72 : 60; // 72px for mobile, 60px for desktop
@@ -1848,6 +1864,11 @@ function showThicknessMeter() {
   brushSizeOverlay.visible = true;
   brushSizeOverlay.timer = brushSizeOverlay.duration;
   brushSizeOverlay.opacity = 0; // Start with zero opacity
+  
+  // Set up animation properties
+  brushSizeOverlay.startSize = brushSizeOverlay.currentSize || 0;
+  brushSizeOverlay.targetSize = baseThickness;
+  brushSizeOverlay.animationStartTime = millis();
 }
 
 function drawThicknessMeter() {
@@ -2234,6 +2255,16 @@ function createMobileControls() {
   // Position the buttons at the bottom with a larger margin to move them up slightly
   let buttonY = height - buttonSize - 25; // Changed from 12 to 25 to move up slightly
   
+  // Common button styles
+  const buttonStyle = {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    transition: 'transform 0.2s ease',
+    border: '1px solid white',  // Add white 1px border to all buttons
+    borderRadius: '50%'         // Make buttons round
+  };
+  
   // Increase thickness button
   let increaseBtn = createButton('+')
     .mousePressed(() => { 
@@ -2247,11 +2278,12 @@ function createMobileControls() {
     .size(buttonSize, buttonSize)
     .addClass('control-button')
     .style('opacity', '0')
-    .style('font-size', '26px') // Set explicit font size 
-    .style('display', 'flex')
-    .style('justify-content', 'center')
-    .style('align-items', 'center')
-    .style('transition', 'transform 0.2s ease'); // Simplify transition
+    .style('font-size', '26px'); // Set explicit font size 
+    
+  // Apply common styles to increase button
+  Object.entries(buttonStyle).forEach(([key, value]) => {
+    increaseBtn.style(key, value);
+  });
     
   // Decrease thickness button
   let decreaseBtn = createButton('-')
@@ -2266,11 +2298,12 @@ function createMobileControls() {
     .size(buttonSize, buttonSize)
     .addClass('control-button')
     .style('opacity', '0')
-    .style('font-size', '26px') // Set explicit font size
-    .style('display', 'flex')
-    .style('justify-content', 'center')
-    .style('align-items', 'center')
-    .style('transition', 'transform 0.2s ease'); // Simplify transition
+    .style('font-size', '26px'); // Set explicit font size
+    
+  // Apply common styles to decrease button
+  Object.entries(buttonStyle).forEach(([key, value]) => {
+    decreaseBtn.style(key, value);
+  });
     
   // Color toggle button - needs special handling for the icon color
   let colorBtn = createButton('')
@@ -2287,11 +2320,12 @@ function createMobileControls() {
     .size(buttonSize, buttonSize)
     .addClass('control-button')
     .addClass('icon')
-    .style('opacity', '0')
-    .style('display', 'flex')
-    .style('justify-content', 'center')
-    .style('align-items', 'center')
-    .style('transition', 'transform 0.2s ease'); // Add transition for animation
+    .style('opacity', '0');
+    
+  // Apply common styles to color button
+  Object.entries(buttonStyle).forEach(([key, value]) => {
+    colorBtn.style(key, value);
+  });
     
   // Set initial color button appearance
   updateColorButtonAppearance(colorBtn);
@@ -2310,11 +2344,12 @@ function createMobileControls() {
     .size(buttonSize, buttonSize)
     .addClass('control-button')
     .addClass('icon')
-    .style('opacity', '0')
-    .style('display', 'flex')
-    .style('justify-content', 'center')
-    .style('align-items', 'center')
-    .style('transition', 'transform 0.2s ease'); // Add transition for animation
+    .style('opacity', '0');
+    
+  // Apply common styles to reset button
+  Object.entries(buttonStyle).forEach(([key, value]) => {
+    resetBtn.style(key, value);
+  });
     
   // Add icon for reset button
   resetBtn.html('<span class="material-symbols-outlined" style="color: white; font-size: 24px;">restart_alt</span>');
@@ -2331,11 +2366,12 @@ function createMobileControls() {
     .size(buttonSize, buttonSize)
     .addClass('control-button')
     .addClass('icon')
-    .style('opacity', '0')
-    .style('display', 'flex')
-    .style('justify-content', 'center')
-    .style('align-items', 'center')
-    .style('transition', 'transform 0.2s ease'); // Add transition for animation
+    .style('opacity', '0');
+    
+  // Apply common styles to save button
+  Object.entries(buttonStyle).forEach(([key, value]) => {
+    saveBtn.style(key, value);
+  });
     
   // Add icon for save button
   saveBtn.html('<span class="material-symbols-outlined" style="color: white; font-size: 24px;">download</span>');
@@ -2556,7 +2592,7 @@ function simpleScreenshot() {
     downloadLink.parent(popup);
     
     // Add download button with dark styling
-    const downloadButton = createButton('Download Image');
+    const downloadButton = createButton('Save Canvas');
     downloadButton.style('font-family', "'Plus Jakarta Sans', sans-serif");
     downloadButton.style('background-color', '#000000');
     downloadButton.style('color', 'white');
@@ -2701,13 +2737,40 @@ function drawBrushSizeOverlay() {
   let centerX = width / 2;
   let centerY = height / 2;
   
-  // Draw the brush size indicator
+  // Calculate smooth animated size with bounce effect
+  let timeSinceStart = millis() - brushSizeOverlay.animationStartTime;
+  let animDuration = 500; // 500ms for the animation
+  let progress = constrain(timeSinceStart / animDuration, 0, 1);
+  
+  // Apply easing with bounce
+  // This creates an elastic/bouncy effect that overshoots then settles
+  let bouncyProgress;
+  if (progress < 0.8) {
+    // During the first 80% of the animation, use an overshooting curve
+    bouncyProgress = -Math.pow(2, -10 * progress) * Math.sin((progress - 0.1) * 5 * Math.PI) + 1;
+    // Add overshoot based on whether we're growing or shrinking
+    let isGrowing = brushSizeOverlay.targetSize > brushSizeOverlay.startSize;
+    let overshootAmount = isGrowing ? 1 + brushSizeOverlay.bounceAmount : 1 - brushSizeOverlay.bounceAmount;
+    bouncyProgress = progress + (bouncyProgress - progress) * overshootAmount;
+  } else {
+    // In the last 20%, settle to the exact target value
+    bouncyProgress = 1 - (1 - progress) * (1 - progress);
+  }
+  
+  // Calculate current size with bouncy animation
+  brushSizeOverlay.currentSize = lerp(
+    brushSizeOverlay.startSize,
+    brushSizeOverlay.targetSize,
+    bouncyProgress
+  );
+  
+  // Draw the brush size indicator with the animated size
   push();
   
   // Draw white 50% fill
   fill(255, brushSizeOverlay.opacity * 0.5); // White with 50% of the current opacity
   noStroke();
-  ellipse(centerX, centerY, baseThickness, baseThickness);
+  ellipse(centerX, centerY, brushSizeOverlay.currentSize, brushSizeOverlay.currentSize);
   
   // Draw dashed black 50% border
   noFill();
@@ -2724,17 +2787,15 @@ function drawBrushSizeOverlay() {
     let startRad = radians(angle);
     let endRad = radians(angle + dashLength);
     
-    let startX = centerX + (baseThickness / 2) * cos(startRad);
-    let startY = centerY + (baseThickness / 2) * sin(startRad);
-    let endX = centerX + (baseThickness / 2) * cos(endRad);
-    let endY = centerY + (baseThickness / 2) * sin(endRad);
+    let startX = centerX + (brushSizeOverlay.currentSize / 2) * cos(startRad);
+    let startY = centerY + (brushSizeOverlay.currentSize / 2) * sin(startRad);
+    let endX = centerX + (brushSizeOverlay.currentSize / 2) * cos(endRad);
+    let endY = centerY + (brushSizeOverlay.currentSize / 2) * sin(endRad);
     
     stroke(0, brushSizeOverlay.opacity * 0.5); // Black with 50% opacity
     strokeWeight(2); // Consistent 2px stroke for the dashed border
     line(startX, startY, endX, endY);
   }
-  
-  // Decrement timer in the draw function instead
   
   pop();
 }
