@@ -463,8 +463,8 @@ function updateCreditLinkPosition() {
   creditLink.style('opacity', '1'); // Always set to full opacity, no fade effect
   
   if (mobileMode) {
-    // Center at the bottom for mobile
-    creditLink.position(width / 2 - creditLink.elt.offsetWidth / 2, height - 30);
+    // Center at the bottom for mobile, slightly higher than before
+    creditLink.position(width / 2 - creditLink.elt.offsetWidth / 2, height - 45);
     creditLink.style('font-size', '12px'); // Smaller font on mobile
   } else {
     // Bottom left for desktop
@@ -1281,8 +1281,8 @@ function draw() {
         }
       }
       
-      // Draw brush size overlay if visible on mobile
-      if (mobileMode && brushSizeOverlay.visible) {
+      // Draw brush size overlay if visible
+      if (brushSizeOverlay.visible) {
         drawBrushSizeOverlay();
         brushSizeOverlay.timer -= deltaTime;
         if (brushSizeOverlay.timer <= 0) {
@@ -1838,12 +1838,10 @@ function showThicknessMeter() {
   thicknessMeter.timer = thicknessMeter.duration;
   thicknessMeter.opacity = 0; // Start with zero opacity
   
-  // Also show brush size overlay on mobile
-  if (mobileMode) {
-    brushSizeOverlay.visible = true;
-    brushSizeOverlay.timer = brushSizeOverlay.duration;
-    brushSizeOverlay.opacity = 0; // Start with zero opacity
-  }
+  // Show brush size overlay on both mobile and desktop
+  brushSizeOverlay.visible = true;
+  brushSizeOverlay.timer = brushSizeOverlay.duration;
+  brushSizeOverlay.opacity = 0; // Start with zero opacity
 }
 
 function drawThicknessMeter() {
@@ -2233,8 +2231,8 @@ function createMobileControls() {
   // Increase thickness button
   let increaseBtn = createButton('+')
     .mousePressed(() => { 
-      // Add animation effect - grow and return to normal
-      animateButtonPress(increaseBtn, 'grow');
+      // Add standard animation effect
+      animateButtonPress(increaseBtn);
       // Execute action after animation starts
       baseThickness += 20; 
       showThicknessMeter(); 
@@ -2244,13 +2242,13 @@ function createMobileControls() {
     .addClass('control-button')
     .style('opacity', '0')
     .style('font-size', '26px') // Set explicit font size 
-    .style('transition', 'transform 0.2s ease, font-size 0.2s ease'); // Add transition for both transform and font-size
+    .style('transition', 'transform 0.2s ease'); // Simplify transition
     
   // Decrease thickness button
   let decreaseBtn = createButton('-')
     .mousePressed(() => { 
-      // Add animation effect - shrink and return to normal
-      animateButtonPress(decreaseBtn, 'shrink');
+      // Add standard animation effect
+      animateButtonPress(decreaseBtn);
       // Execute action after animation starts
       baseThickness = max(20, baseThickness - 20); 
       showThicknessMeter(); 
@@ -2260,7 +2258,7 @@ function createMobileControls() {
     .addClass('control-button')
     .style('opacity', '0')
     .style('font-size', '26px') // Set explicit font size
-    .style('transition', 'transform 0.2s ease, font-size 0.2s ease'); // Add transition for both transform and font-size
+    .style('transition', 'transform 0.2s ease'); // Simplify transition
     
   // Color toggle button - needs special handling for the icon color
   let colorBtn = createButton('invert_colors')
@@ -2320,13 +2318,13 @@ function createMobileControls() {
   
   // Add touch event handlers for mobile
   addTouchHandlers(increaseBtn, () => { 
-    animateButtonPress(increaseBtn, 'grow');
+    animateButtonPress(increaseBtn);
     baseThickness += 20; 
     showThicknessMeter(); 
   });
   
   addTouchHandlers(decreaseBtn, () => { 
-    animateButtonPress(decreaseBtn, 'shrink');
+    animateButtonPress(decreaseBtn);
     baseThickness = max(20, baseThickness - 20); 
     showThicknessMeter(); 
   });
@@ -2366,44 +2364,15 @@ function animateButtonPress(button, type = 'standard') {
   // Always apply the grow effect to the button itself
   button.style('transform', 'scale(1.2)');
   
-  // Apply additional specific animations based on type
-  switch (type) {
-    case 'grow':
-      // Grow the plus sign inside
-      if (button.elt.innerHTML === '+') {
-        // Set a larger font size
-        const originalFontSize = button.elt.style.fontSize;
-        button.elt.style.fontSize = '34px';
-        
-        // Reset after animation
-        setTimeout(() => {
-          button.elt.style.fontSize = '26px'; // Reset to the default 
-        }, 200);
-      }
-      break;
-      
-    case 'shrink':
-      // Shrink the minus sign inside
-      if (button.elt.innerHTML === '-') {
-        // Set a smaller font size
-        const originalFontSize = button.elt.style.fontSize;
-        button.elt.style.fontSize = '18px';
-        
-        // Reset after animation
-        setTimeout(() => {
-          button.elt.style.fontSize = '26px'; // Reset to the default
-        }, 200);
-      }
-      break;
-      
-    case 'rotate':
-      // Add spin animation while also growing
-      button.addClass('rotating');
-      // Remove class after animation completes
-      setTimeout(() => {
-        button.removeClass('rotating');
-      }, 500);
-      break;
+  // Only handle rotation animation specially
+  if (type === 'rotate') {
+    // Add spin animation while also growing
+    button.addClass('rotating');
+    
+    // Remove class after animation completes
+    setTimeout(() => {
+      button.removeClass('rotating');
+    }, 500);
   }
   
   // Return button to normal size after animation
@@ -2475,7 +2444,7 @@ function simpleScreenshot() {
     
     // Create a simple popup with the screenshot
     const popup = createDiv();
-    popup.addClass('screenshot-popup');
+    popup.addClass('screenshot-popup'); // This class is now targeted in the CSS
     popup.style('position', 'fixed');
     popup.style('top', '0');
     popup.style('left', '0');
@@ -2515,14 +2484,33 @@ function simpleScreenshot() {
     img.style('border', '8px solid white'); // Add border to the image
     img.parent(popup);
     
-    // Add proper save functionality
+    // Enhanced save functionality with stronger overrides
     img.elt.style.webkitTouchCallout = 'default'; // Enable save on iOS
     img.elt.style.userSelect = 'auto'; // Enable selection
     img.elt.style.webkitUserSelect = 'auto'; // Enable selection for Safari
     img.elt.style.webkitUserDrag = 'element'; // Enable drag to save
+    img.elt.style.pointerEvents = 'auto'; // Enable pointer events
+    img.elt.setAttribute('crossorigin', 'anonymous'); // Allow cross-origin if needed
+    
+    // Create a direct download link as an alternative
+    const downloadLink = createA(dataURL, '', '_blank');
+    downloadLink.attribute('download', 'FATCAP_ART.png');
+    downloadLink.style('display', 'none');
+    downloadLink.parent(popup);
+    
+    // Make the image clickable for direct download
+    img.mousePressed(() => {
+      downloadLink.elt.click();
+    });
+    
+    // Also allow for touch
+    img.elt.addEventListener('touchend', (e) => {
+      e.stopPropagation(); // Prevent popup from closing
+      // No preventDefault to allow long-press save on iOS
+    });
     
     // Create instruction text
-    const instructions = createP('Press and hold image to save');
+    const instructions = createP('Press and hold image to save or tap to download');
     instructions.style('color', 'white');
     instructions.style('text-align', 'center');
     instructions.style('font-family', "'Plus Jakarta Sans', sans-serif");
