@@ -17,7 +17,7 @@ let brushSizeOverlay = {
   currentSize: 0,     // Current animated size
   startSize: 0,       // Starting size for animation
   animationStartTime: 0, // When the animation started
-  bounceAmount: 0.2   // How much to overshoot (20%)
+  animDuration: 300   // Duration of the animation in ms - shorter for faster feedback
 };
 let isFadingOutCanvas = false;
 let fadeOutCanvasProgress = 0;
@@ -43,6 +43,15 @@ let isModalOpen = false; // New variable to track if any modal is open
 
 // Add variable to track the credit link
 let creditLink = null;
+
+// Add variables to track continuous button presses
+let isIncreasePressed = false;
+let isDecreasePressed = false;
+let continuousAdjustTimer = null;
+let adjustSpeed = 1; // Starting speed multiplier for exponential growth
+let lastAdjustTime = 0;
+let minBrushSize = 20;
+let maxBrushSize = 500;
 
 function detectSafari() {
   const ua = navigator.userAgent.toLowerCase();
@@ -1433,9 +1442,19 @@ function mouseReleased() {
       let dripChance = isDrawingBlack ? (mobileMode ? 0.025 : 0.05) : (mobileMode ? 0.05 : 0.1);
       
       if (random() < dripChance) {
-        let thickness = mobileMode ? random(5, 15) : random(10, 30);
+        // Calculate drip thickness based on line thickness with some randomness
+        let lineThickness = currentSpline.baseThickness;
+        // Black lines are already thinner, so we need to account for that
+        if (red(currentSpline.color) === 22 && green(currentSpline.color) === 22 && blue(currentSpline.color) === 22) {
+          lineThickness *= 0.5;
+        }
+        // Make drip 20-40% of the line thickness
+        let dripThickness = lineThickness * random(0.2, 0.4);
+        // Ensure minimum and maximum reasonable sizes
+        dripThickness = constrain(dripThickness, mobileMode ? 3 : 5, mobileMode ? 20 : 40);
+        
         let targetY = min(pt.y + random(mobileMode ? 100 : 200, mobileMode ? 300 : 500), height);
-        currentSpline.verticalLines.push({ x: pt.x, y: pt.y, targetY, startTime: millis(), thickness, delay: random(500, 2000) });
+        currentSpline.verticalLines.push({ x: pt.x, y: pt.y, targetY, startTime: millis(), thickness: dripThickness, delay: random(500, 2000) });
       }
     }
   });
@@ -1632,9 +1651,19 @@ function touchEnded() {
       let dripChance = isDrawingBlack ? (mobileMode ? 0.025 : 0.05) : (mobileMode ? 0.05 : 0.1);
       
       if (random() < dripChance) {
-        let thickness = mobileMode ? random(5, 15) : random(10, 30);
+        // Calculate drip thickness based on line thickness with some randomness
+        let lineThickness = currentSpline.baseThickness;
+        // Black lines are already thinner, so we need to account for that
+        if (red(currentSpline.color) === 22 && green(currentSpline.color) === 22 && blue(currentSpline.color) === 22) {
+          lineThickness *= 0.5;
+        }
+        // Make drip 20-40% of the line thickness
+        let dripThickness = lineThickness * random(0.2, 0.4);
+        // Ensure minimum and maximum reasonable sizes
+        dripThickness = constrain(dripThickness, mobileMode ? 3 : 5, mobileMode ? 20 : 40);
+        
         let targetY = min(pt.y + random(mobileMode ? 100 : 200, mobileMode ? 300 : 500), height);
-        currentSpline.verticalLines.push({ x: pt.x, y: pt.y, targetY, startTime: millis(), thickness, delay: random(500, 2000) });
+        currentSpline.verticalLines.push({ x: pt.x, y: pt.y, targetY, startTime: millis(), thickness: dripThickness, delay: random(500, 2000) });
       }
     }
   });
@@ -1659,13 +1688,61 @@ function keyPressed() {
   if (startScreen && !startTime) return;
 
   if (keyCode === UP_ARROW) {
-    baseThickness += 20;
-    showThicknessMeter();
+    // Start continuous increase
+    isIncreasePressed = true;
+    isDecreasePressed = false;
+    adjustSpeed = 1;
+    lastAdjustTime = millis();
+    
+    // Increase exactly by 10 on single press
+    baseThickness = Math.min(maxBrushSize, baseThickness + 10);
+    // Round to nearest 10 to ensure clean values
+    baseThickness = Math.round(baseThickness / 10) * 10;
+    
+    brushSizeOverlay.startSize = brushSizeOverlay.currentSize || baseThickness - 10;
+    brushSizeOverlay.targetSize = baseThickness;
+    brushSizeOverlay.animationStartTime = millis();
+    brushSizeOverlay.visible = true;
+    brushSizeOverlay.timer = brushSizeOverlay.duration;
+    
+    // Show thickness meter
+    thicknessMeter.visible = true;
+    thicknessMeter.timer = thicknessMeter.duration;
+    
+    // Set up continuous adjustment
+    if (!continuousAdjustTimer) {
+      continuousAdjustTimer = setInterval(continuousAdjustBrushSize, 50);
+    }
   }
+  
   if (keyCode === DOWN_ARROW) {
-    baseThickness = max(20, baseThickness - 20);
-    showThicknessMeter();
+    // Start continuous decrease
+    isDecreasePressed = true;
+    isIncreasePressed = false;
+    adjustSpeed = 1;
+    lastAdjustTime = millis();
+    
+    // Decrease exactly by 10 on single press
+    baseThickness = Math.max(minBrushSize, baseThickness - 10);
+    // Round to nearest 10 to ensure clean values
+    baseThickness = Math.round(baseThickness / 10) * 10;
+    
+    brushSizeOverlay.startSize = brushSizeOverlay.currentSize || baseThickness + 10;
+    brushSizeOverlay.targetSize = baseThickness;
+    brushSizeOverlay.animationStartTime = millis();
+    brushSizeOverlay.visible = true;
+    brushSizeOverlay.timer = brushSizeOverlay.duration;
+    
+    // Show thickness meter
+    thicknessMeter.visible = true;
+    thicknessMeter.timer = thicknessMeter.duration;
+    
+    // Set up continuous adjustment
+    if (!continuousAdjustTimer) {
+      continuousAdjustTimer = setInterval(continuousAdjustBrushSize, 50);
+    }
   }
+  
   if (key === 'a' || key === 'A') {
     isDrawingBlack = true;
     showColorMeter();
@@ -1683,6 +1760,15 @@ function keyPressed() {
 
 function keyReleased() {
   if (startScreen && !startTime) return;
+  
+  if (keyCode === UP_ARROW) {
+    isIncreasePressed = false;
+  }
+  
+  if (keyCode === DOWN_ARROW) {
+    isDecreasePressed = false;
+  }
+  
   if (key === 'a' || key === 'A') {
     isDrawingBlack = false;
     showColorMeter();
@@ -1877,22 +1963,15 @@ function drawThicknessMeter() {
   let x = width / 2 - meterWidth / 2;
   let y = 20; // Same position as color meter (top center)
   
-  // Calculate opacity based on timer
-  if (thicknessMeter.timer > thicknessMeter.duration * 0.7) {
-    // Fade in during the first 30% of duration
-    thicknessMeter.opacity = map(thicknessMeter.timer, thicknessMeter.duration, thicknessMeter.duration * 0.7, 0, 255);
-  } else if (thicknessMeter.timer < 300) {
-    // Fade out during the last 300ms
-    thicknessMeter.opacity = map(thicknessMeter.timer, 0, 300, 0, 255);
-  } else {
-    // Full opacity in the middle
+  // No fade animation - always full opacity when visible
+  if (thicknessMeter.visible) {
     thicknessMeter.opacity = 255;
   }
   
-  fill(22, 22, 22, thicknessMeter.opacity); // #161616 background with animated opacity
+  fill(22, 22, 22, thicknessMeter.opacity); // #161616 background
   noStroke();
   rect(x, y, meterWidth, meterHeight, 10);
-  fill(255, 255, 255, thicknessMeter.opacity); // #fff text with same opacity
+  fill(255, 255, 255, thicknessMeter.opacity); // #fff text
   textSize(16);
   textAlign(CENTER, CENTER);
   textFont("'Plus Jakarta Sans', sans-serif");
@@ -2270,9 +2349,31 @@ function createMobileControls() {
     .mousePressed(() => { 
       // Add standard animation effect
       animateButtonPress(increaseBtn);
-      // Execute action after animation starts
-      baseThickness += 20; 
-      showThicknessMeter(); 
+      // Start continuous adjustment
+      isIncreasePressed = true;
+      isDecreasePressed = false; // Ensure only one direction active
+      adjustSpeed = 1; // Reset speed multiplier
+      lastAdjustTime = millis();
+      
+      // Increase exactly by 10 on single press
+      baseThickness = Math.min(maxBrushSize, baseThickness + 10);
+      // Round to nearest 10 to ensure clean values
+      baseThickness = Math.round(baseThickness / 10) * 10;
+      
+      brushSizeOverlay.startSize = brushSizeOverlay.currentSize || baseThickness - 10;
+      brushSizeOverlay.targetSize = baseThickness;
+      brushSizeOverlay.animationStartTime = millis();
+      brushSizeOverlay.visible = true;
+      brushSizeOverlay.timer = brushSizeOverlay.duration;
+      
+      // Show thickness meter
+      thicknessMeter.visible = true;
+      thicknessMeter.timer = thicknessMeter.duration;
+      
+      // Set up continuous adjustment
+      if (!continuousAdjustTimer) {
+        continuousAdjustTimer = setInterval(continuousAdjustBrushSize, 50); // Check every 50ms
+      }
     })
     .position(startX, buttonY)
     .size(buttonSize, buttonSize)
@@ -2284,15 +2385,49 @@ function createMobileControls() {
   Object.entries(buttonStyle).forEach(([key, value]) => {
     increaseBtn.style(key, value);
   });
+  
+  // Add mouseReleased event to stop continuous adjustment
+  increaseBtn.mouseReleased(() => {
+    isIncreasePressed = false;
+  });
+  
+  // Also handle touch events for mouseReleased equivalent
+  if (increaseBtn.elt) {
+    increaseBtn.elt.addEventListener('touchend', () => {
+      isIncreasePressed = false;
+    });
+  }
     
   // Decrease thickness button
   let decreaseBtn = createButton('-')
     .mousePressed(() => { 
       // Add standard animation effect
       animateButtonPress(decreaseBtn);
-      // Execute action after animation starts
-      baseThickness = max(20, baseThickness - 20); 
-      showThicknessMeter(); 
+      // Start continuous adjustment
+      isDecreasePressed = true;
+      isIncreasePressed = false; // Ensure only one direction active
+      adjustSpeed = 1; // Reset speed multiplier
+      lastAdjustTime = millis();
+      
+      // Decrease exactly by 10 on single press
+      baseThickness = Math.max(minBrushSize, baseThickness - 10);
+      // Round to nearest 10 to ensure clean values
+      baseThickness = Math.round(baseThickness / 10) * 10;
+      
+      brushSizeOverlay.startSize = brushSizeOverlay.currentSize || baseThickness + 10;
+      brushSizeOverlay.targetSize = baseThickness;
+      brushSizeOverlay.animationStartTime = millis();
+      brushSizeOverlay.visible = true;
+      brushSizeOverlay.timer = brushSizeOverlay.duration;
+      
+      // Show thickness meter
+      thicknessMeter.visible = true;
+      thicknessMeter.timer = thicknessMeter.duration;
+      
+      // Set up continuous adjustment
+      if (!continuousAdjustTimer) {
+        continuousAdjustTimer = setInterval(continuousAdjustBrushSize, 50); // Check every 50ms
+      }
     })
     .position(startX + buttonSize + 10, buttonY)
     .size(buttonSize, buttonSize)
@@ -2304,6 +2439,18 @@ function createMobileControls() {
   Object.entries(buttonStyle).forEach(([key, value]) => {
     decreaseBtn.style(key, value);
   });
+  
+  // Add mouseReleased event to stop continuous adjustment
+  decreaseBtn.mouseReleased(() => {
+    isDecreasePressed = false;
+  });
+  
+  // Also handle touch events for mouseReleased equivalent
+  if (decreaseBtn.elt) {
+    decreaseBtn.elt.addEventListener('touchend', () => {
+      isDecreasePressed = false;
+    });
+  }
     
   // Color toggle button - needs special handling for the icon color
   let colorBtn = createButton('')
@@ -2721,60 +2868,38 @@ function drawBrushSizeOverlay() {
   // Only draw if visible
   if (!brushSizeOverlay.visible) return;
   
-  // Calculate opacity based on timer (same as thickness meter)
-  if (brushSizeOverlay.timer > brushSizeOverlay.duration * 0.7) {
-    // Fade in during the first 30% of duration
-    brushSizeOverlay.opacity = map(brushSizeOverlay.timer, brushSizeOverlay.duration, brushSizeOverlay.duration * 0.7, 0, 255);
-  } else if (brushSizeOverlay.timer < 300) {
-    // Fade out during the last 300ms
-    brushSizeOverlay.opacity = map(brushSizeOverlay.timer, 0, 300, 0, 255);
-  } else {
-    // Full opacity in the middle
-    brushSizeOverlay.opacity = 255;
-  }
+  // No fade animation - always full opacity when visible
+  brushSizeOverlay.opacity = 255;
   
   // Position in the center of the screen
   let centerX = width / 2;
   let centerY = height / 2;
   
-  // Calculate smooth animated size with bounce effect
+  // Calculate smooth animated size - simple ease-out animation
   let timeSinceStart = millis() - brushSizeOverlay.animationStartTime;
-  let animDuration = 500; // 500ms for the animation
-  let progress = constrain(timeSinceStart / animDuration, 0, 1);
+  let progress = constrain(timeSinceStart / brushSizeOverlay.animDuration, 0, 1);
   
-  // Apply easing with bounce
-  // This creates an elastic/bouncy effect that overshoots then settles
-  let bouncyProgress;
-  if (progress < 0.8) {
-    // During the first 80% of the animation, use an overshooting curve
-    bouncyProgress = -Math.pow(2, -10 * progress) * Math.sin((progress - 0.1) * 5 * Math.PI) + 1;
-    // Add overshoot based on whether we're growing or shrinking
-    let isGrowing = brushSizeOverlay.targetSize > brushSizeOverlay.startSize;
-    let overshootAmount = isGrowing ? 1 + brushSizeOverlay.bounceAmount : 1 - brushSizeOverlay.bounceAmount;
-    bouncyProgress = progress + (bouncyProgress - progress) * overshootAmount;
-  } else {
-    // In the last 20%, settle to the exact target value
-    bouncyProgress = 1 - (1 - progress) * (1 - progress);
-  }
+  // Apply simple ease-out function for smooth growth
+  let easedProgress = 1 - Math.pow(1 - progress, 2); // Ease out quad
   
-  // Calculate current size with bouncy animation
+  // Calculate current size with smooth animation
   brushSizeOverlay.currentSize = lerp(
     brushSizeOverlay.startSize,
     brushSizeOverlay.targetSize,
-    bouncyProgress
+    easedProgress
   );
   
   // Draw the brush size indicator with the animated size
   push();
   
   // Draw white 50% fill
-  fill(255, brushSizeOverlay.opacity * 0.5); // White with 50% of the current opacity
+  fill(255, brushSizeOverlay.opacity * 0.5);
   noStroke();
   ellipse(centerX, centerY, brushSizeOverlay.currentSize, brushSizeOverlay.currentSize);
   
   // Draw dashed black 50% border
   noFill();
-  stroke(0, brushSizeOverlay.opacity * 0.5); // Black with 50% of the current opacity
+  stroke(0, brushSizeOverlay.opacity * 0.5);
   strokeWeight(2);
   
   // Create a dashed circle manually
@@ -2792,10 +2917,58 @@ function drawBrushSizeOverlay() {
     let endX = centerX + (brushSizeOverlay.currentSize / 2) * cos(endRad);
     let endY = centerY + (brushSizeOverlay.currentSize / 2) * sin(endRad);
     
-    stroke(0, brushSizeOverlay.opacity * 0.5); // Black with 50% opacity
-    strokeWeight(2); // Consistent 2px stroke for the dashed border
+    stroke(0, brushSizeOverlay.opacity * 0.5);
+    strokeWeight(2);
     line(startX, startY, endX, endY);
   }
   
   pop();
+}
+
+// Function to handle continuous brush size adjustment with increments of 10
+function continuousAdjustBrushSize() {
+  // Exit early if neither button is pressed
+  if (!isIncreasePressed && !isDecreasePressed) {
+    // Clear the interval if no buttons are pressed
+    if (continuousAdjustTimer) {
+      clearInterval(continuousAdjustTimer);
+      continuousAdjustTimer = null;
+    }
+    return;
+  }
+  
+  // Calculate time since last adjustment for acceleration
+  let currentTime = millis();
+  let deltaTime = currentTime - lastAdjustTime;
+  lastAdjustTime = currentTime;
+  
+  // Accelerate the adjustment speed over time (exponential growth)
+  adjustSpeed = min(adjustSpeed * 1.05, 10); // Cap at 10x speed
+  
+  // Calculate the amount to adjust based on current speed - use increments of 10
+  let baseIncrement = 10; // Base increment of 10 pixels
+  let adjustAmount = baseIncrement * Math.floor(adjustSpeed);
+  
+  if (isIncreasePressed) {
+    // Increase brush size with acceleration
+    let newSize = min(baseThickness + adjustAmount, maxBrushSize);
+    // Round to nearest 10
+    baseThickness = Math.floor(newSize / 10) * 10;
+  } else if (isDecreasePressed) {
+    // Decrease brush size with acceleration
+    let newSize = max(baseThickness - adjustAmount, minBrushSize);
+    // Round to nearest 10
+    baseThickness = Math.floor(newSize / 10) * 10;
+  }
+  
+  // Update the brush size overlay without fading in/out
+  brushSizeOverlay.startSize = brushSizeOverlay.currentSize;
+  brushSizeOverlay.targetSize = baseThickness;
+  brushSizeOverlay.animationStartTime = currentTime;
+  brushSizeOverlay.visible = true;
+  brushSizeOverlay.timer = brushSizeOverlay.duration;
+  
+  // Keep the thickness meter visible with full opacity
+  thicknessMeter.visible = true;
+  thicknessMeter.timer = thicknessMeter.duration;
 }
