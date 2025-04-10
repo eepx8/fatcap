@@ -8,6 +8,7 @@ let paletteText = null;
 let startScreenColor;
 let thicknessMeter = { visible: false, timer: 0, duration: 1000, opacity: 0 };
 let colorMeter = { visible: false, timer: 0, duration: 1000, opacity: 0 };
+let brushSizeOverlay = { visible: false, timer: 0, duration: 1000, opacity: 0 };
 let isFadingOutCanvas = false;
 let fadeOutCanvasProgress = 0;
 let wipeAnimation = null;
@@ -451,9 +452,19 @@ function setup() {
 function updateCreditLinkPosition() {
   if (!creditLink) return;
   
+  // Hide credit link when drawing is active (not in start screen)
+  if (!startScreen) {
+    creditLink.style('display', 'none');
+    return;
+  }
+  
+  // Only show credit link on start screen
+  creditLink.style('display', 'block');
+  creditLink.style('opacity', '1'); // Always set to full opacity, no fade effect
+  
   if (mobileMode) {
-    // Top left corner for mobile
-    creditLink.position(10, 10);
+    // Center at the bottom for mobile
+    creditLink.position(width / 2 - creditLink.elt.offsetWidth / 2, height - 30);
     creditLink.style('font-size', '12px'); // Smaller font on mobile
   } else {
     // Bottom left for desktop
@@ -839,16 +850,35 @@ function fadeOutStartScreen() {
     blinkInterval = null;
   }
 
-  if (mobileMode) {
-    // Use the mobile controls function
-    createMobileControls();
-    
-    // Hide desktop controls if they exist
-    if (helpButton) helpButton.style('opacity', '0');
+  // Fade out palette containers first 
+  const paletteContainer = select('.palette-container');
+  if (paletteContainer && paletteContainer.elt) {
+    paletteContainer.style('opacity', '0');
+    setTimeout(() => {
+      paletteContainer.remove();
+      
+      // Only create mobile controls after palette container is faded out
+      if (mobileMode) {
+        // Use the mobile controls function
+        createMobileControls();
+        
+        // Hide desktop controls if they exist
+        if (helpButton) helpButton.style('opacity', '0');
+      } else {
+        // Show desktop controls
+        console.log("Showing desktop controls");
+        if (helpButton) helpButton.style('opacity', '1');
+      }
+    }, 500);
   } else {
-    // Show desktop controls
-    console.log("Showing desktop controls");
-    if (helpButton) helpButton.style('opacity', '1');
+    // If no palette container, create controls immediately
+    if (mobileMode) {
+      createMobileControls();
+      if (helpButton) helpButton.style('opacity', '0');
+    } else {
+      console.log("Showing desktop controls");
+      if (helpButton) helpButton.style('opacity', '1');
+    }
   }
 
   setTimeout(() => {
@@ -858,15 +888,6 @@ function fadeOutStartScreen() {
     // Remove credit link entirely on mobile
     if (mobileMode && creditLink) {
       creditLink.style('display', 'none');
-    }
-    
-    // Fade out palette containers
-    const paletteContainer = select('.palette-container');
-    if (paletteContainer && paletteContainer.elt) {
-      paletteContainer.style('opacity', '0');
-      setTimeout(() => {
-        paletteContainer.remove();
-      }, 500);
     }
     
     // Clear palette buttons array
@@ -1239,29 +1260,51 @@ function draw() {
         if (currentSpline) drawSpline(currentSpline);
         pop(); // Restore drawing state
       }
-
-      if (isFadingOut && startTime) {
-        fadeOutProgress += deltaTime / 300;
-        if (fadeOutProgress > 1) fadeOutProgress = 1;
-        let alpha = lerp(255, 0, fadeOutProgress);
-        fill(red(startScreenColor), green(startScreenColor), blue(startScreenColor), alpha);
-        noStroke();
-        rect(0, 0, width, height);
+      
+      // Draw thickness meter if visible
+      if (thicknessMeter.visible) {
+        thicknessMeter.timer -= deltaTime;
+        if (thicknessMeter.timer <= 0) {
+          thicknessMeter.visible = false;
+        } else {
+          drawThicknessMeter();
+        }
+      }
+      
+      // Draw color meter if visible
+      if (colorMeter.visible) {
+        colorMeter.timer -= deltaTime;
+        if (colorMeter.timer <= 0) {
+          colorMeter.visible = false;
+        } else {
+          drawColorMeter();
+        }
+      }
+      
+      // Draw brush size overlay if visible on mobile
+      if (mobileMode && brushSizeOverlay.visible) {
+        drawBrushSizeOverlay();
+        brushSizeOverlay.timer -= deltaTime;
+        if (brushSizeOverlay.timer <= 0) {
+          brushSizeOverlay.visible = false;
+        }
+      }
+      
+      // Draw credit link if it's visible
+      if (creditLink && creditLink.style('display') !== 'none') {
+        updateCreditLinkPosition();
       }
     }
 
     noiseOffset += 0.01;
 
-    if (thicknessMeter.visible) {
-      drawThicknessMeter();
-      thicknessMeter.timer -= deltaTime;
-      if (thicknessMeter.timer <= 0) thicknessMeter.visible = false;
-    }
-
-    if (colorMeter.visible) {
-      drawColorMeter();
-      colorMeter.timer -= deltaTime;
-      if (colorMeter.timer <= 0) colorMeter.visible = false;
+    if (isFadingOut && startTime) {
+      fadeOutProgress += deltaTime / 300;
+      if (fadeOutProgress > 1) fadeOutProgress = 1;
+      let alpha = lerp(255, 0, fadeOutProgress);
+      fill(red(startScreenColor), green(startScreenColor), blue(startScreenColor), alpha);
+      noStroke();
+      rect(0, 0, width, height);
     }
   } catch (error) {
     console.error("Error in draw loop:", error);
@@ -1794,6 +1837,13 @@ function showThicknessMeter() {
   thicknessMeter.visible = true;
   thicknessMeter.timer = thicknessMeter.duration;
   thicknessMeter.opacity = 0; // Start with zero opacity
+  
+  // Also show brush size overlay on mobile
+  if (mobileMode) {
+    brushSizeOverlay.visible = true;
+    brushSizeOverlay.timer = brushSizeOverlay.duration;
+    brushSizeOverlay.opacity = 0; // Start with zero opacity
+  }
 }
 
 function drawThicknessMeter() {
@@ -2177,8 +2227,8 @@ function createMobileControls() {
   let buttonSize = 60;
   let totalWidth = buttonSize * 5 + 10 * 4; // 5 buttons including save button
   let startX = (width - totalWidth) / 2;
-  // Position the buttons at the bottom with 12px margin
-  let buttonY = height - buttonSize - 12;
+  // Position the buttons at the bottom with a larger margin to move them up slightly
+  let buttonY = height - buttonSize - 25; // Changed from 12 to 25 to move up slightly
   
   // Increase thickness button
   let increaseBtn = createButton('+')
@@ -2193,7 +2243,8 @@ function createMobileControls() {
     .size(buttonSize, buttonSize)
     .addClass('control-button')
     .style('opacity', '0')
-    .style('transition', 'transform 0.2s ease'); // Add transition for animation
+    .style('font-size', '26px') // Set explicit font size 
+    .style('transition', 'transform 0.2s ease, font-size 0.2s ease'); // Add transition for both transform and font-size
     
   // Decrease thickness button
   let decreaseBtn = createButton('-')
@@ -2208,7 +2259,8 @@ function createMobileControls() {
     .size(buttonSize, buttonSize)
     .addClass('control-button')
     .style('opacity', '0')
-    .style('transition', 'transform 0.2s ease'); // Add transition for animation
+    .style('font-size', '26px') // Set explicit font size
+    .style('transition', 'transform 0.2s ease, font-size 0.2s ease'); // Add transition for both transform and font-size
     
   // Color toggle button - needs special handling for the icon color
   let colorBtn = createButton('invert_colors')
@@ -2319,13 +2371,13 @@ function animateButtonPress(button, type = 'standard') {
     case 'grow':
       // Grow the plus sign inside
       if (button.elt.innerHTML === '+') {
-        // Save original font size
-        const originalSize = window.getComputedStyle(button.elt).fontSize;
-        // Increase font size temporarily
-        button.elt.style.fontSize = 'calc(' + originalSize + ' * 1.3)';
+        // Set a larger font size
+        const originalFontSize = button.elt.style.fontSize;
+        button.elt.style.fontSize = '34px';
+        
         // Reset after animation
         setTimeout(() => {
-          button.elt.style.fontSize = originalSize;
+          button.elt.style.fontSize = '26px'; // Reset to the default 
         }, 200);
       }
       break;
@@ -2333,13 +2385,13 @@ function animateButtonPress(button, type = 'standard') {
     case 'shrink':
       // Shrink the minus sign inside
       if (button.elt.innerHTML === '-') {
-        // Save original font size
-        const originalSize = window.getComputedStyle(button.elt).fontSize;
-        // Decrease font size temporarily
-        button.elt.style.fontSize = 'calc(' + originalSize + ' * 0.7)';
+        // Set a smaller font size
+        const originalFontSize = button.elt.style.fontSize;
+        button.elt.style.fontSize = '18px';
+        
         // Reset after animation
         setTimeout(() => {
-          button.elt.style.fontSize = originalSize;
+          button.elt.style.fontSize = '26px'; // Reset to the default
         }, 200);
       }
       break;
@@ -2365,15 +2417,14 @@ function updateColorButtonAppearance(button) {
   if (!button || !button.elt) return;
   
   if (isDrawingBlack) {
-    // In black mode, show softened rainbow gradient on the same icon
+    // In black mode, show brighter rainbow gradient without dark colors
     button.elt.innerHTML = `
       <span class="material-symbols-outlined" style="background: linear-gradient(90deg, 
-        rgba(255,0,0,0.8) 0%, 
-        rgba(255,165,0,0.8) 20%, 
-        rgba(255,255,0,0.8) 40%, 
-        rgba(0,128,0,0.8) 60%, 
-        rgba(0,0,255,0.8) 80%, 
-        rgba(128,0,128,0.8) 100%);
+        rgba(255,51,51,1) 0%, 
+        rgba(255,153,51,1) 20%, 
+        rgba(255,255,51,1) 40%, 
+        rgba(102,255,51,1) 60%, 
+        rgba(255,51,255,1) 80%);
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
@@ -2439,6 +2490,12 @@ function simpleScreenshot() {
     popup.style('opacity', '0'); // Start with opacity 0 for fade-in
     popup.style('transition', 'opacity 0.3s ease-in-out'); // Add transition for fade-in
     
+    // Add to DOM first to ensure transitions work
+    document.body.appendChild(popup.elt);
+    
+    // Force a reflow to ensure the transition works
+    void popup.elt.offsetWidth;
+    
     // Add title in Six Caps font
     const title = createDiv('SAVE ARTWORK?');
     title.style('font-family', "'Six Caps', sans-serif");
@@ -2448,46 +2505,95 @@ function simpleScreenshot() {
     title.style('text-align', 'center');
     title.parent(popup);
     
-    // Create image element
+    // Create image element - make it smaller as requested
     const img = createImg(dataURL, 'Your artwork');
-    img.style('max-width', '90%');
-    img.style('max-height', '60%'); // Reduced height to make room for title
+    img.style('max-width', '80%'); // Reduced from 90%
+    img.style('max-height', '50%'); // Reduced from 60%
     img.style('object-fit', 'contain');
     img.style('display', 'block');
     img.style('margin-bottom', '20px');
     img.style('border', '8px solid white'); // Add border to the image
     img.parent(popup);
     
+    // Add proper save functionality
+    img.elt.style.webkitTouchCallout = 'default'; // Enable save on iOS
+    img.elt.style.userSelect = 'auto'; // Enable selection
+    img.elt.style.webkitUserSelect = 'auto'; // Enable selection for Safari
+    img.elt.style.webkitUserDrag = 'element'; // Enable drag to save
+    
     // Create instruction text
-    const instructions = createP('Press and hold image to save<br>Tap anywhere to close');
+    const instructions = createP('Press and hold image to save');
     instructions.style('color', 'white');
     instructions.style('text-align', 'center');
     instructions.style('font-family', "'Plus Jakarta Sans', sans-serif");
     instructions.style('margin-top', '10px');
+    instructions.style('margin-bottom', '20px'); // Add space before cancel button
     instructions.style('padding', '0 20px');
     instructions.parent(popup);
+    
+    // Add a Cancel button
+    const cancelBtn = createButton('Cancel');
+    cancelBtn.style('font-family', "'Plus Jakarta Sans', sans-serif");
+    cancelBtn.style('background-color', '#000000');
+    cancelBtn.style('color', 'white');
+    cancelBtn.style('border', '2px solid white');
+    cancelBtn.style('border-radius', '30px');
+    cancelBtn.style('padding', '12px 30px');
+    cancelBtn.style('font-size', '16px');
+    cancelBtn.style('cursor', 'pointer');
+    cancelBtn.style('display', 'block');
+    cancelBtn.parent(popup);
+    
+    // Close when Cancel button is clicked
+    cancelBtn.mousePressed(() => {
+      popup.style('opacity', '0');
+      setTimeout(() => {
+        popup.remove();
+        controls.forEach(control => control.style('display', 'block'));
+        // Only show credit link if in start screen
+        if (creditLink && startScreen) creditLink.style('display', 'block');
+      }, 300); // Wait for fade-out to complete
+    });
+    
+    // Make cancel button work with touch
+    if (cancelBtn.elt) {
+      cancelBtn.elt.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        popup.style('opacity', '0');
+        setTimeout(() => {
+          popup.remove();
+          controls.forEach(control => control.style('display', 'block'));
+          // Only show credit link if in start screen
+          if (creditLink && startScreen) creditLink.style('display', 'block');
+        }, 300);
+      });
+    }
+    
+    // Close popup when clicking outside the image (on the background)
+    popup.mousePressed(() => {
+      // Only close if the click is directly on the popup background, not its children
+      if (event.target === popup.elt) {
+        popup.style('opacity', '0');
+        setTimeout(() => {
+          popup.remove();
+          controls.forEach(control => control.style('display', 'block'));
+          // Only show credit link if in start screen
+          if (creditLink && startScreen) creditLink.style('display', 'block');
+        }, 300); // Wait for fade-out to complete
+      }
+    });
     
     // Fade in the popup after a short delay
     setTimeout(() => {
       popup.style('opacity', '1');
     }, 10);
     
-    // Close popup and show controls again when clicking anywhere
-    popup.mousePressed(() => {
-      // Fade out before removing
-      popup.style('opacity', '0');
-      setTimeout(() => {
-        popup.remove();
-        controls.forEach(control => control.style('display', 'block'));
-        if (creditLink) creditLink.style('display', 'block');
-      }, 300); // Wait for fade-out to complete
-    });
-    
   } catch (error) {
     console.error("Error taking screenshot:", error);
     // Show controls again in case of error
     controls.forEach(control => control.style('display', 'block'));
-    if (creditLink) creditLink.style('display', 'block');
+    // Only show credit link if in start screen
+    if (creditLink && startScreen) creditLink.style('display', 'block');
   }
 }
 
@@ -2505,4 +2611,62 @@ function addTouchHandlers(button, callback) {
       callback();
     });
   }
+}
+
+function drawBrushSizeOverlay() {
+  // Only draw if visible
+  if (!brushSizeOverlay.visible) return;
+  
+  // Calculate opacity based on timer (same as thickness meter)
+  if (brushSizeOverlay.timer > brushSizeOverlay.duration * 0.7) {
+    // Fade in during the first 30% of duration
+    brushSizeOverlay.opacity = map(brushSizeOverlay.timer, brushSizeOverlay.duration, brushSizeOverlay.duration * 0.7, 0, 255);
+  } else if (brushSizeOverlay.timer < 300) {
+    // Fade out during the last 300ms
+    brushSizeOverlay.opacity = map(brushSizeOverlay.timer, 0, 300, 0, 255);
+  } else {
+    // Full opacity in the middle
+    brushSizeOverlay.opacity = 255;
+  }
+  
+  // Position in the center of the screen
+  let centerX = width / 2;
+  let centerY = height / 2;
+  
+  // Draw the brush size indicator
+  push();
+  
+  // Draw white 50% fill
+  fill(255, brushSizeOverlay.opacity * 0.5); // White with 50% of the current opacity
+  noStroke();
+  ellipse(centerX, centerY, baseThickness, baseThickness);
+  
+  // Draw dashed black 50% border
+  noFill();
+  stroke(0, brushSizeOverlay.opacity * 0.5); // Black with 50% of the current opacity
+  strokeWeight(2);
+  
+  // Create a dashed circle manually
+  let steps = 36; // Number of segments to create the dashed effect
+  let dashLength = 5; // Length of each dash segment in degrees
+  let gapLength = 5; // Length of each gap in degrees
+  
+  // Draw the border with the same thickness as the brush
+  for (let angle = 0; angle < 360; angle += dashLength + gapLength) {
+    let startRad = radians(angle);
+    let endRad = radians(angle + dashLength);
+    
+    let startX = centerX + (baseThickness / 2) * cos(startRad);
+    let startY = centerY + (baseThickness / 2) * sin(startRad);
+    let endX = centerX + (baseThickness / 2) * cos(endRad);
+    let endY = centerY + (baseThickness / 2) * sin(endRad);
+    
+    stroke(0, brushSizeOverlay.opacity * 0.5); // Black with 50% opacity
+    strokeWeight(2); // Consistent 2px stroke for the dashed border
+    line(startX, startY, endX, endY);
+  }
+  
+  // Decrement timer in the draw function instead
+  
+  pop();
 }
