@@ -53,6 +53,17 @@
       -ms-user-select: auto !important;
       -webkit-touch-callout: default !important;
       pointer-events: auto !important;
+      touch-action: auto !important;
+    }
+    
+    /* Additional iOS Safari specific fixes */
+    @supports (-webkit-touch-callout: default) {
+      .screenshot-popup img {
+        -webkit-touch-callout: default !important; 
+        -webkit-user-select: auto !important;
+        user-select: auto !important;
+        touch-action: manipulation !important;
+      }
     }
   </style>
   <title>FATCAP | Px8 Studio in Helsinki</title>

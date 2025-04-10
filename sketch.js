@@ -463,12 +463,18 @@ function updateCreditLinkPosition() {
   creditLink.style('opacity', '1'); // Always set to full opacity, no fade effect
   
   if (mobileMode) {
-    // Center at the bottom for mobile, slightly higher than before
-    creditLink.position(width / 2 - creditLink.elt.offsetWidth / 2, height - 45);
+    // Ensure perfect centering on mobile by using CSS instead of manual calculation
+    creditLink.style('position', 'absolute');
+    creditLink.style('bottom', '45px');
+    creditLink.style('left', '50%');
+    creditLink.style('transform', 'translateX(-50%)');
+    creditLink.style('text-align', 'center');
     creditLink.style('font-size', '12px'); // Smaller font on mobile
   } else {
     // Bottom left for desktop
+    creditLink.style('position', 'absolute');
     creditLink.position(20, height - 30);
+    creditLink.style('transform', 'none'); // Remove transform on desktop
     creditLink.style('font-size', '14px'); // Original size for desktop
   }
 }
@@ -2242,6 +2248,9 @@ function createMobileControls() {
     .addClass('control-button')
     .style('opacity', '0')
     .style('font-size', '26px') // Set explicit font size 
+    .style('display', 'flex')
+    .style('justify-content', 'center')
+    .style('align-items', 'center')
     .style('transition', 'transform 0.2s ease'); // Simplify transition
     
   // Decrease thickness button
@@ -2258,10 +2267,13 @@ function createMobileControls() {
     .addClass('control-button')
     .style('opacity', '0')
     .style('font-size', '26px') // Set explicit font size
+    .style('display', 'flex')
+    .style('justify-content', 'center')
+    .style('align-items', 'center')
     .style('transition', 'transform 0.2s ease'); // Simplify transition
     
   // Color toggle button - needs special handling for the icon color
-  let colorBtn = createButton('invert_colors')
+  let colorBtn = createButton('')
     .mousePressed(() => { 
       // Add animation effect
       animateButtonPress(colorBtn);
@@ -2276,13 +2288,16 @@ function createMobileControls() {
     .addClass('control-button')
     .addClass('icon')
     .style('opacity', '0')
+    .style('display', 'flex')
+    .style('justify-content', 'center')
+    .style('align-items', 'center')
     .style('transition', 'transform 0.2s ease'); // Add transition for animation
     
   // Set initial color button appearance
   updateColorButtonAppearance(colorBtn);
     
   // Reset button
-  let resetBtn = createButton('restart_alt')
+  let resetBtn = createButton('')
     .mousePressed(() => { 
       // Add rotation animation
       animateButtonPress(resetBtn, 'rotate');
@@ -2296,10 +2311,16 @@ function createMobileControls() {
     .addClass('control-button')
     .addClass('icon')
     .style('opacity', '0')
+    .style('display', 'flex')
+    .style('justify-content', 'center')
+    .style('align-items', 'center')
     .style('transition', 'transform 0.2s ease'); // Add transition for animation
+    
+  // Add icon for reset button
+  resetBtn.html('<span class="material-symbols-outlined" style="color: white; font-size: 24px;">restart_alt</span>');
   
   // Add back the save button with simplified functionality
-  let saveBtn = createButton('download')
+  let saveBtn = createButton('')
     .mousePressed(() => { 
       // Add animation effect
       animateButtonPress(saveBtn);
@@ -2311,7 +2332,13 @@ function createMobileControls() {
     .addClass('control-button')
     .addClass('icon')
     .style('opacity', '0')
+    .style('display', 'flex')
+    .style('justify-content', 'center')
+    .style('align-items', 'center')
     .style('transition', 'transform 0.2s ease'); // Add transition for animation
+    
+  // Add icon for save button
+  saveBtn.html('<span class="material-symbols-outlined" style="color: white; font-size: 24px;">download</span>');
   
   // Add buttons to controls array
   controls.push(increaseBtn, decreaseBtn, colorBtn, resetBtn, saveBtn);
@@ -2484,23 +2511,72 @@ function simpleScreenshot() {
     img.style('border', '8px solid white'); // Add border to the image
     img.parent(popup);
     
-    // Enhanced save functionality with stronger overrides
+    // Enhanced save functionality with stronger overrides for iOS Safari
     img.elt.style.webkitTouchCallout = 'default'; // Enable save on iOS
     img.elt.style.userSelect = 'auto'; // Enable selection
     img.elt.style.webkitUserSelect = 'auto'; // Enable selection for Safari
+    img.elt.style.mozUserSelect = 'auto'; // Firefox
+    img.elt.style.msUserSelect = 'auto'; // IE/Edge
     img.elt.style.webkitUserDrag = 'element'; // Enable drag to save
     img.elt.style.pointerEvents = 'auto'; // Enable pointer events
+    img.elt.style.touchAction = 'auto'; // Ensure all touch actions work on the image
     img.elt.setAttribute('crossorigin', 'anonymous'); // Allow cross-origin if needed
+    
+    // For iOS Safari specifically
+    if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) {
+      console.log("iOS detected, adding extra save options");
+      
+      // Explicitly set all attributes that might help with saving
+      img.attribute('data-downloadable', 'true');
+      img.elt.setAttribute('oncontextmenu', 'return true'); // Allow context menu
+      
+      // Create a direct download button specifically for iOS
+      const iosDownloadBtn = createButton('Download Image');
+      iosDownloadBtn.style('font-family', "'Plus Jakarta Sans', sans-serif");
+      iosDownloadBtn.style('background-color', '#0066cc');
+      iosDownloadBtn.style('color', 'white');
+      iosDownloadBtn.style('border', 'none');
+      iosDownloadBtn.style('border-radius', '30px');
+      iosDownloadBtn.style('padding', '12px 24px');
+      iosDownloadBtn.style('font-size', '16px');
+      iosDownloadBtn.style('margin', '10px auto');
+      iosDownloadBtn.style('display', 'block');
+      iosDownloadBtn.parent(popup);
+     
+      // On iOS, when button is clicked, show image in a new tab
+      iosDownloadBtn.mousePressed(() => {
+        window.open(dataURL, '_blank');
+    });
+    
+      // Add touch support for iOS button
+      if (iosDownloadBtn.elt) {
+        iosDownloadBtn.elt.addEventListener('touchend', (e) => {
+        e.preventDefault();
+          e.stopPropagation();
+          window.open(dataURL, '_blank');
+      });
+    }
+    
+      // Add instructions specifically for iOS
+      const iOSInstructions = createP('For iOS: Tap the Download button above or press and hold on the image in the new tab');
+      iOSInstructions.style('color', 'white');
+      iOSInstructions.style('text-align', 'center');
+      iOSInstructions.style('font-family', "'Plus Jakarta Sans', sans-serif");
+      iOSInstructions.style('font-size', '12px');
+      iOSInstructions.style('padding', '0 20px');
+      iOSInstructions.style('margin-top', '0');
+      iOSInstructions.parent(popup);
+    }
     
     // Create a direct download link as an alternative
     const downloadLink = createA(dataURL, '', '_blank');
     downloadLink.attribute('download', 'FATCAP_ART.png');
-    downloadLink.style('display', 'none');
+        downloadLink.style('display', 'none');
     downloadLink.parent(popup);
     
     // Make the image clickable for direct download
     img.mousePressed(() => {
-      downloadLink.elt.click();
+        downloadLink.elt.click();
     });
     
     // Also allow for touch
@@ -2537,7 +2613,14 @@ function simpleScreenshot() {
       popup.style('opacity', '0');
       setTimeout(() => {
         popup.remove();
-        controls.forEach(control => control.style('display', 'block'));
+        
+        // Instead of showing existing controls, recreate them for proper centering
+        if (mobileMode) {
+          createMobileControls();
+        } else {
+          controls.forEach(control => control.style('display', 'block'));
+        }
+        
         // Only show credit link if in start screen
         if (creditLink && startScreen) creditLink.style('display', 'block');
       }, 300); // Wait for fade-out to complete
@@ -2550,7 +2633,14 @@ function simpleScreenshot() {
         popup.style('opacity', '0');
         setTimeout(() => {
           popup.remove();
-          controls.forEach(control => control.style('display', 'block'));
+          
+          // Instead of showing existing controls, recreate them for proper centering
+          if (mobileMode) {
+            createMobileControls();
+          } else {
+            controls.forEach(control => control.style('display', 'block'));
+          }
+          
           // Only show credit link if in start screen
           if (creditLink && startScreen) creditLink.style('display', 'block');
         }, 300);
@@ -2564,7 +2654,14 @@ function simpleScreenshot() {
         popup.style('opacity', '0');
         setTimeout(() => {
           popup.remove();
-          controls.forEach(control => control.style('display', 'block'));
+          
+          // Instead of showing existing controls, recreate them for proper centering
+          if (mobileMode) {
+            createMobileControls();
+          } else {
+            controls.forEach(control => control.style('display', 'block'));
+          }
+          
           // Only show credit link if in start screen
           if (creditLink && startScreen) creditLink.style('display', 'block');
         }, 300); // Wait for fade-out to complete
