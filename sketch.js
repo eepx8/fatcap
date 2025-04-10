@@ -51,6 +51,9 @@ function setup() {
   createCanvas(windowWidth, windowHeight);
   frameRate(60);
   
+  // Add rotation animation style
+  addRotationStyle();
+  
   try {
     // Initialize color palettes AFTER p5.js is initialized
     colorPalettes = {
@@ -449,11 +452,13 @@ function updateCreditLinkPosition() {
   if (!creditLink) return;
   
   if (mobileMode) {
-    // Center horizontally at bottom for mobile
-    creditLink.position((width - creditLink.elt.offsetWidth) / 2, height - 30);
+    // Top left corner for mobile
+    creditLink.position(10, 10);
+    creditLink.style('font-size', '12px'); // Smaller font on mobile
   } else {
     // Bottom left for desktop
     creditLink.position(20, height - 30);
+    creditLink.style('font-size', '14px'); // Original size for desktop
   }
 }
 
@@ -537,7 +542,7 @@ function updateStartScreenElements() {
   
   // Update subtitle if it exists
   if (subtitle && subtitle.elt) {
-    subtitle.style('top', mobileMode ? '15%' : '15%');
+    subtitle.style('top', mobileMode ? '25%' : '15%');
     subtitle.style('margin-bottom', mobileMode ? '5px' : '60px');
   }
   
@@ -682,12 +687,12 @@ function setupStartScreen() {
           drip.startTime = millis();
         }
         
-        // Delay showing the palette container until after the title is fully visible
+        // Delay showing the palette container with a smoother fade-in
         setTimeout(() => {
           console.log("Showing palette container");
           paletteContainer.style('display', 'flex');
           setTimeout(() => paletteContainer.style('opacity', '1'), 10);
-        }, 300); // Additional delay after title fade-in
+        }, 500); // Additional delay after title fade-in
         
       }, 600);
     }, 10);
@@ -708,7 +713,7 @@ function setupStartScreen() {
         blinkInterval = null;
       }
     }, 1000);
-  }, 1400); // Adjust timing to match new palette display
+  }, 1600); // Adjust timing to match new palette display
   
   console.log("Start screen setup completed");
 }
@@ -716,12 +721,12 @@ function setupStartScreen() {
 // Function to create palette selection buttons
 function createPaletteButtons(container) {
   const palettes = [
-    { name: 'CLASSIC', key: 'classic' },
-    { name: 'VIBRANT', key: 'vibrant' },
-    { name: 'COMP', key: 'comp' }
+    { name: 'Classic', key: 'classic' },
+    { name: 'Vibrant', key: 'vibrant' },
+    { name: 'Comp', key: 'comp' }
   ];
   
-  const buttonSize = mobileMode ? 60 : 60; // Same size for both mobile and desktop now
+  const buttonSize = mobileMode ? 72 : 60; // 72px for mobile, 60px for desktop
   const spacing = mobileMode ? 15 : 20;
   
   let totalWidth = palettes.length * buttonSize + (palettes.length - 1) * spacing;
@@ -735,7 +740,7 @@ function createPaletteButtons(container) {
       .addClass('palette-button-container')
       .style('opacity', '0') // Start with opacity 0
       .style('transform', 'scale(0.8)') // Start slightly smaller
-      .style('transition', 'opacity 0.3s ease, transform 0.3s ease'); // Add transition
+      .style('transition', 'opacity 0.6s ease-in-out, transform 0.6s ease-in-out'); // Enhanced transition
       
     // Create the actual button
     let btn = createButton(palette.name)
@@ -745,15 +750,19 @@ function createPaletteButtons(container) {
       });
       
     if (mobileMode) {
-      btn.style('width', '60px'); // Larger size on mobile
-      btn.style('height', '60px');
+      btn.style('width', '72px'); // Larger size on mobile
+      btn.style('height', '72px');
       btn.style('font-size', '11px');
+      btn.style('text-transform', 'none'); // Remove all caps
+      btn.style('font-family', "'Plus Jakarta Sans', sans-serif");
       
       // Handle very small screens
       if (windowWidth < 400) {
-        btn.style('width', '55px');
-        btn.style('height', '55px');
+        btn.style('width', '72px');
+        btn.style('height', '72px');
       }
+    } else {
+      btn.style('font-family', "'Plus Jakarta Sans', sans-serif");
     }
     
     // Add touch support for the buttons
@@ -771,11 +780,11 @@ function createPaletteButtons(container) {
     // Add to global array for later reference
     paletteButtons.push(btnContainer);
     
-    // Create a delayed animation for each button
+    // Create a more pronounced staggered animation for each button
     setTimeout(() => {
       btnContainer.style('opacity', '1');
       btnContainer.style('transform', 'scale(1)');
-    }, 200 + (index * 150)); // Stagger the fade in of each button
+    }, 250 + (index * 200)); // Longer staggered delay for more visible animation
   });
 }
 
@@ -817,6 +826,8 @@ function fadeOutStartScreen() {
   
   if (subtitle) subtitle.style('opacity', '0');
   if (startText) startText.style('opacity', '0');
+  if (creditLink) creditLink.style('opacity', '0'); // Fade out credit link
+  
   startTime = millis();
   isFadingOut = true;
   fadeOutProgress = 0;
@@ -844,6 +855,11 @@ function fadeOutStartScreen() {
     if (subtitle) subtitle.remove();
     if (startText) startText.remove();
     
+    // Remove credit link entirely on mobile
+    if (mobileMode && creditLink) {
+      creditLink.style('display', 'none');
+    }
+    
     // Fade out palette containers
     const paletteContainer = select('.palette-container');
     if (paletteContainer && paletteContainer.elt) {
@@ -864,6 +880,8 @@ function fadeOutStartScreen() {
         if (title) title.remove();
         if (!mobileMode) {
           if (helpButton) helpButton.style('display', 'flex');
+          // Only show credit link on desktop
+          if (creditLink) creditLink.style('opacity', '1');
         }
         console.log("Start screen faded out, startScreen:", startScreen);
       }, 500);
@@ -1296,6 +1314,21 @@ function mouseDragged() {
   // AND when no modal is open
   if ((startScreen && !startTime) || isModalOpen) return;
   
+  // Check if mouse is over any control button
+  if (controls.length > 0) {
+    for (let i = 0; i < controls.length; i++) {
+      let control = controls[i];
+      if (control && control.elt) {
+        let rect = control.elt.getBoundingClientRect();
+        if (mouseX >= rect.left && mouseX <= rect.right && 
+            mouseY >= rect.top && mouseY <= rect.bottom) {
+          // Mouse is over a button, don't draw
+          return;
+        }
+      }
+    }
+  }
+  
   // Create a new spline if needed
   if (!currentSpline) {
     currentSpline = { 
@@ -1452,9 +1485,9 @@ function touchMoved() {
     }
   }
   
-  // If touching a button, allow the event to propagate
+  // If touching a button, don't draw and allow the event to propagate
   if (touchingButton) {
-    return;
+    return false;
   }
   
   // Only allow drawing when not in start screen or when startTime is set
@@ -2127,7 +2160,7 @@ function saveArtwork() {
   }
 }
 
-// Function to create mobile controls with the download button added back
+// Function to create mobile controls with a simple download button
 function createMobileControls() {
   console.log("Creating mobile controls");
   
@@ -2142,58 +2175,320 @@ function createMobileControls() {
   controls = [];
   
   let buttonSize = 60;
-  let totalWidth = buttonSize * 4 + 10 * 3; // 4 buttons without save button
+  let totalWidth = buttonSize * 5 + 10 * 4; // 5 buttons including save button
   let startX = (width - totalWidth) / 2;
-  // Position the buttons higher up on the screen
-  let buttonY = height - 120; // Changed from height - 90 to height - 120
+  // Position the buttons at the bottom with 12px margin
+  let buttonY = height - buttonSize - 12;
   
   // Increase thickness button
   let increaseBtn = createButton('+')
-    .mousePressed(() => { baseThickness += 20; showThicknessMeter(); })
+    .mousePressed(() => { 
+      // Add animation effect - grow and return to normal
+      animateButtonPress(increaseBtn, 'grow');
+      // Execute action after animation starts
+      baseThickness += 20; 
+      showThicknessMeter(); 
+    })
     .position(startX, buttonY)
     .size(buttonSize, buttonSize)
     .addClass('control-button')
-    .style('opacity', '0');
+    .style('opacity', '0')
+    .style('transition', 'transform 0.2s ease'); // Add transition for animation
     
   // Decrease thickness button
   let decreaseBtn = createButton('-')
-    .mousePressed(() => { baseThickness = max(20, baseThickness - 20); showThicknessMeter(); })
+    .mousePressed(() => { 
+      // Add animation effect - shrink and return to normal
+      animateButtonPress(decreaseBtn, 'shrink');
+      // Execute action after animation starts
+      baseThickness = max(20, baseThickness - 20); 
+      showThicknessMeter(); 
+    })
     .position(startX + buttonSize + 10, buttonY)
     .size(buttonSize, buttonSize)
     .addClass('control-button')
-    .style('opacity', '0');
+    .style('opacity', '0')
+    .style('transition', 'transform 0.2s ease'); // Add transition for animation
     
-  // Color toggle button
+  // Color toggle button - needs special handling for the icon color
   let colorBtn = createButton('invert_colors')
-    .mousePressed(() => { isDrawingBlack = !isDrawingBlack; showColorMeter(); })
+    .mousePressed(() => { 
+      // Add animation effect
+      animateButtonPress(colorBtn);
+      // Toggle color state
+      isDrawingBlack = !isDrawingBlack; 
+      showColorMeter(); 
+      // Update icon color based on mode
+      updateColorButtonAppearance(colorBtn);
+    })
     .position(startX + (buttonSize + 10) * 2, buttonY)
     .size(buttonSize, buttonSize)
     .addClass('control-button')
     .addClass('icon')
-    .style('opacity', '0');
+    .style('opacity', '0')
+    .style('transition', 'transform 0.2s ease'); // Add transition for animation
+    
+  // Set initial color button appearance
+  updateColorButtonAppearance(colorBtn);
     
   // Reset button
   let resetBtn = createButton('restart_alt')
-    .mousePressed(() => { if (splines.length > 0) { startWipeAnimation(); }})
+    .mousePressed(() => { 
+      // Add rotation animation
+      animateButtonPress(resetBtn, 'rotate');
+      // Execute action after animation starts
+      if (splines.length > 0) { 
+        startWipeAnimation(); 
+      }
+    })
     .position(startX + (buttonSize + 10) * 3, buttonY)
     .size(buttonSize, buttonSize)
     .addClass('control-button')
     .addClass('icon')
-    .style('opacity', '0');
+    .style('opacity', '0')
+    .style('transition', 'transform 0.2s ease'); // Add transition for animation
+  
+  // Add back the save button with simplified functionality
+  let saveBtn = createButton('download')
+    .mousePressed(() => { 
+      // Add animation effect
+      animateButtonPress(saveBtn);
+      // Execute action after animation starts
+      simpleScreenshot(); 
+    })
+    .position(startX + (buttonSize + 10) * 4, buttonY)
+    .size(buttonSize, buttonSize)
+    .addClass('control-button')
+    .addClass('icon')
+    .style('opacity', '0')
+    .style('transition', 'transform 0.2s ease'); // Add transition for animation
   
   // Add buttons to controls array
-  controls.push(increaseBtn, decreaseBtn, colorBtn, resetBtn);
+  controls.push(increaseBtn, decreaseBtn, colorBtn, resetBtn, saveBtn);
   
   // Add touch event handlers for mobile
-  addTouchHandlers(increaseBtn, () => { baseThickness += 20; showThicknessMeter(); });
-  addTouchHandlers(decreaseBtn, () => { baseThickness = max(20, baseThickness - 20); showThicknessMeter(); });
-  addTouchHandlers(colorBtn, () => { isDrawingBlack = !isDrawingBlack; showColorMeter(); });
-  addTouchHandlers(resetBtn, () => { if (splines.length > 0) { startWipeAnimation(); }});
+  addTouchHandlers(increaseBtn, () => { 
+    animateButtonPress(increaseBtn, 'grow');
+    baseThickness += 20; 
+    showThicknessMeter(); 
+  });
+  
+  addTouchHandlers(decreaseBtn, () => { 
+    animateButtonPress(decreaseBtn, 'shrink');
+    baseThickness = max(20, baseThickness - 20); 
+    showThicknessMeter(); 
+  });
+  
+  addTouchHandlers(colorBtn, () => { 
+    animateButtonPress(colorBtn);
+    isDrawingBlack = !isDrawingBlack; 
+    showColorMeter();
+    updateColorButtonAppearance(colorBtn);
+  });
+  
+  addTouchHandlers(resetBtn, () => { 
+    animateButtonPress(resetBtn, 'rotate');
+    if (splines.length > 0) { 
+      startWipeAnimation(); 
+    }
+  });
+  
+  addTouchHandlers(saveBtn, () => { 
+    animateButtonPress(saveBtn);
+    simpleScreenshot(); 
+  });
   
   // Fade in the buttons
   setTimeout(() => {
     controls.forEach(control => control.style('opacity', '1'));
   }, 10);
+}
+
+// Function to animate button press
+function animateButtonPress(button, type = 'standard') {
+  if (!button || !button.elt) return;
+  
+  // Remove any existing animation classes
+  button.removeClass('rotating');
+  
+  // Always apply the grow effect to the button itself
+  button.style('transform', 'scale(1.2)');
+  
+  // Apply additional specific animations based on type
+  switch (type) {
+    case 'grow':
+      // Grow the plus sign inside
+      if (button.elt.innerHTML === '+') {
+        // Save original font size
+        const originalSize = window.getComputedStyle(button.elt).fontSize;
+        // Increase font size temporarily
+        button.elt.style.fontSize = 'calc(' + originalSize + ' * 1.3)';
+        // Reset after animation
+        setTimeout(() => {
+          button.elt.style.fontSize = originalSize;
+        }, 200);
+      }
+      break;
+      
+    case 'shrink':
+      // Shrink the minus sign inside
+      if (button.elt.innerHTML === '-') {
+        // Save original font size
+        const originalSize = window.getComputedStyle(button.elt).fontSize;
+        // Decrease font size temporarily
+        button.elt.style.fontSize = 'calc(' + originalSize + ' * 0.7)';
+        // Reset after animation
+        setTimeout(() => {
+          button.elt.style.fontSize = originalSize;
+        }, 200);
+      }
+      break;
+      
+    case 'rotate':
+      // Add spin animation while also growing
+      button.addClass('rotating');
+      // Remove class after animation completes
+      setTimeout(() => {
+        button.removeClass('rotating');
+      }, 500);
+      break;
+  }
+  
+  // Return button to normal size after animation
+  setTimeout(() => {
+    button.style('transform', 'scale(1)');
+  }, 200);
+}
+
+// Update the color button appearance based on current drawing mode
+function updateColorButtonAppearance(button) {
+  if (!button || !button.elt) return;
+  
+  if (isDrawingBlack) {
+    // In black mode, show softened rainbow gradient on the same icon
+    button.elt.innerHTML = `
+      <span class="material-symbols-outlined" style="background: linear-gradient(90deg, 
+        rgba(255,0,0,0.8) 0%, 
+        rgba(255,165,0,0.8) 20%, 
+        rgba(255,255,0,0.8) 40%, 
+        rgba(0,128,0,0.8) 60%, 
+        rgba(0,0,255,0.8) 80%, 
+        rgba(128,0,128,0.8) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        font-size: 24px;">invert_colors</span>
+    `;
+  } else {
+    // In color mode, use white text
+    button.elt.innerHTML = '<span class="material-symbols-outlined" style="color: white; font-size: 24px;">invert_colors</span>';
+  }
+}
+
+// Add a style element for the rotating animation
+function addRotationStyle() {
+  let style = document.createElement('style');
+  style.textContent = `
+    .rotating {
+      animation: spin 0.5s linear;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg) scale(1.2); }
+      100% { transform: rotate(-360deg) scale(1.2); }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// Simple screenshot function for mobile devices
+function simpleScreenshot() {
+  try {
+    console.log("Taking simple screenshot");
+    
+    // Draw white background and all elements to the canvas
+    background(255);
+    splines.forEach(spline => drawSpline(spline));
+    if (currentSpline) drawSpline(currentSpline);
+    
+    // Hide controls and credit link temporarily
+    controls.forEach(control => control.style('display', 'none'));
+    if (creditLink) creditLink.style('display', 'none');
+    
+    // Force a redraw to make sure controls are hidden
+    redraw();
+    
+    // Get the canvas element and create a data URL
+    const canvas = document.querySelector('canvas');
+    const dataURL = canvas.toDataURL('image/png');
+    
+    // Create a simple popup with the screenshot
+    const popup = createDiv();
+    popup.addClass('screenshot-popup');
+    popup.style('position', 'fixed');
+    popup.style('top', '0');
+    popup.style('left', '0');
+    popup.style('width', '100%');
+    popup.style('height', '100%');
+    popup.style('background-color', 'rgba(0, 0, 0, 0.9)');
+    popup.style('z-index', '10000');
+    popup.style('display', 'flex');
+    popup.style('flex-direction', 'column');
+    popup.style('align-items', 'center');
+    popup.style('justify-content', 'center');
+    popup.style('opacity', '0'); // Start with opacity 0 for fade-in
+    popup.style('transition', 'opacity 0.3s ease-in-out'); // Add transition for fade-in
+    
+    // Add title in Six Caps font
+    const title = createDiv('SAVE ARTWORK?');
+    title.style('font-family', "'Six Caps', sans-serif");
+    title.style('font-size', '5rem');
+    title.style('color', 'white');
+    title.style('margin-bottom', '20px');
+    title.style('text-align', 'center');
+    title.parent(popup);
+    
+    // Create image element
+    const img = createImg(dataURL, 'Your artwork');
+    img.style('max-width', '90%');
+    img.style('max-height', '60%'); // Reduced height to make room for title
+    img.style('object-fit', 'contain');
+    img.style('display', 'block');
+    img.style('margin-bottom', '20px');
+    img.style('border', '8px solid white'); // Add border to the image
+    img.parent(popup);
+    
+    // Create instruction text
+    const instructions = createP('Press and hold image to save<br>Tap anywhere to close');
+    instructions.style('color', 'white');
+    instructions.style('text-align', 'center');
+    instructions.style('font-family', "'Plus Jakarta Sans', sans-serif");
+    instructions.style('margin-top', '10px');
+    instructions.style('padding', '0 20px');
+    instructions.parent(popup);
+    
+    // Fade in the popup after a short delay
+    setTimeout(() => {
+      popup.style('opacity', '1');
+    }, 10);
+    
+    // Close popup and show controls again when clicking anywhere
+    popup.mousePressed(() => {
+      // Fade out before removing
+      popup.style('opacity', '0');
+      setTimeout(() => {
+        popup.remove();
+        controls.forEach(control => control.style('display', 'block'));
+        if (creditLink) creditLink.style('display', 'block');
+      }, 300); // Wait for fade-out to complete
+    });
+    
+  } catch (error) {
+    console.error("Error taking screenshot:", error);
+    // Show controls again in case of error
+    controls.forEach(control => control.style('display', 'block'));
+    if (creditLink) creditLink.style('display', 'block');
+  }
 }
 
 // Helper function to add touch handlers to mobile buttons

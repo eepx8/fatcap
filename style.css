@@ -123,7 +123,7 @@ canvas {
   gap: 20px;
   z-index: 1000;
   opacity: 0;
-  transition: opacity 0.5s ease-in;
+  transition: opacity 0.8s ease-in-out;
   width: 100%;
   pointer-events: auto;
 }
@@ -133,7 +133,7 @@ canvas {
   flex-direction: column;
   align-items: center;
   gap: 5px;
-  transition: opacity 0.5s ease-in;
+  transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
   z-index: 1000;
   pointer-events: auto;
 }
@@ -387,9 +387,9 @@ canvas {
   }
   
   .palette-button {
-    width: 60px; /* Larger size on mobile */
-    height: 60px; /* Larger size on mobile */
-    font-size: 11px;
+    width: 72px;
+    height: 72px;
+    text-transform: none;
   }
   
   /* Title width responsive adjustments */
