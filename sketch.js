@@ -2471,7 +2471,7 @@ function simpleScreenshot() {
     
     // Create a simple popup with the screenshot
     const popup = createDiv();
-    popup.addClass('screenshot-popup'); // This class is now targeted in the CSS
+    popup.addClass('screenshot-popup');
     popup.style('position', 'fixed');
     popup.style('top', '0');
     popup.style('left', '0');
@@ -2483,8 +2483,8 @@ function simpleScreenshot() {
     popup.style('flex-direction', 'column');
     popup.style('align-items', 'center');
     popup.style('justify-content', 'center');
-    popup.style('opacity', '0'); // Start with opacity 0 for fade-in
-    popup.style('transition', 'opacity 0.3s ease-in-out'); // Add transition for fade-in
+    popup.style('opacity', '0');
+    popup.style('transition', 'opacity 0.3s ease-in-out');
     
     // Add to DOM first to ensure transitions work
     document.body.appendChild(popup.elt);
@@ -2501,94 +2501,83 @@ function simpleScreenshot() {
     title.style('text-align', 'center');
     title.parent(popup);
     
-    // Create image element - make it smaller as requested
+    // Create image element with a clean border
     const img = createImg(dataURL, 'Your artwork');
-    img.style('max-width', '80%'); // Reduced from 90%
-    img.style('max-height', '50%'); // Reduced from 60%
+    img.style('max-width', '85%');
+    img.style('max-height', '50%');
     img.style('object-fit', 'contain');
     img.style('display', 'block');
     img.style('margin-bottom', '20px');
-    img.style('border', '8px solid white'); // Add border to the image
+    img.style('border', '8px solid white');
+    img.style('border-radius', '4px');
     img.parent(popup);
     
-    // Enhanced save functionality with stronger overrides for iOS Safari
-    img.elt.style.webkitTouchCallout = 'default'; // Enable save on iOS
-    img.elt.style.userSelect = 'auto'; // Enable selection
-    img.elt.style.webkitUserSelect = 'auto'; // Enable selection for Safari
-    img.elt.style.mozUserSelect = 'auto'; // Firefox
-    img.elt.style.msUserSelect = 'auto'; // IE/Edge
-    img.elt.style.webkitUserDrag = 'element'; // Enable drag to save
-    img.elt.style.pointerEvents = 'auto'; // Enable pointer events
-    img.elt.style.touchAction = 'auto'; // Ensure all touch actions work on the image
-    img.elt.setAttribute('crossorigin', 'anonymous'); // Allow cross-origin if needed
-    
-    // For iOS Safari specifically
-    if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) {
-      console.log("iOS detected, adding extra save options");
+    // MAXIMIZE SAVE CAPABILITY - enable ALL possible ways to save the image
+    if (img.elt) {
+      // Enable all touch and selection options
+      img.elt.style.webkitTouchCallout = 'default';
+      img.elt.style.webkitUserSelect = 'auto';
+      img.elt.style.khtmlUserSelect = 'auto';
+      img.elt.style.mozUserSelect = 'auto';
+      img.elt.style.msUserSelect = 'auto';
+      img.elt.style.userSelect = 'auto';
       
-      // Explicitly set all attributes that might help with saving
-      img.attribute('data-downloadable', 'true');
-      img.elt.setAttribute('oncontextmenu', 'return true'); // Allow context menu
+      // Enable all drag options
+      img.elt.style.webkitUserDrag = 'element';
+      img.elt.style.khtmlUserDrag = 'element';
+      img.elt.style.mozUserDrag = 'element';
+      img.elt.style.userDrag = 'element';
       
-      // Create a direct download button specifically for iOS
-      const iosDownloadBtn = createButton('Download Image');
-      iosDownloadBtn.style('font-family', "'Plus Jakarta Sans', sans-serif");
-      iosDownloadBtn.style('background-color', '#000000');
-      iosDownloadBtn.style('color', 'white');
-      iosDownloadBtn.style('border', '2px solid white');
-      iosDownloadBtn.style('border-radius', '30px');
-      iosDownloadBtn.style('padding', '12px 30px');
-      iosDownloadBtn.style('font-size', '16px');
-      iosDownloadBtn.style('cursor', 'pointer');
-      iosDownloadBtn.style('display', 'block');
-      iosDownloadBtn.style('margin', '10px auto 20px auto'); // Add more space after button
-      iosDownloadBtn.parent(popup);
-     
-      // On iOS, when button is clicked, show image in a new tab
-      iosDownloadBtn.mousePressed(() => {
-        console.log("iOS Download button clicked");
-        window.open(dataURL, '_blank');
-      });
-    
-      // Enhanced touch support for iOS button to ensure it works reliably
-      iosDownloadBtn.elt.addEventListener('touchstart', function(e) {
-        e.preventDefault();
-        console.log("iOS Download touchstart");
-      }, {passive: false});
+      // Enable all pointer events
+      img.elt.style.pointerEvents = 'auto';
+      img.elt.style.touchAction = 'auto';
       
-      iosDownloadBtn.elt.addEventListener('touchend', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log("iOS Download touchend, opening image");
-        
-        // Small delay to ensure event completes before opening window
-        setTimeout(function() {
-          window.open(dataURL, '_blank');
-        }, 10);
-      }, {passive: false});
+      // Allow context menu
+      img.elt.oncontextmenu = function() { return true; };
       
-      // Remove the iOS instructions text while keeping the button
+      // Ensure the image is fully loaded and not blocked
+      img.elt.setAttribute('crossorigin', 'anonymous');
+      img.elt.setAttribute('loading', 'eager');
     }
     
-    // Create a direct download link as an alternative
+    // Create buttons container
+    const buttonContainer = createDiv();
+    buttonContainer.style('display', 'flex');
+    buttonContainer.style('flex-direction', mobileMode ? 'column' : 'row');
+    buttonContainer.style('gap', '10px');
+    buttonContainer.style('margin-bottom', '20px');
+    buttonContainer.style('width', mobileMode ? '85%' : 'auto');
+    buttonContainer.parent(popup);
+    
+    // Create a direct download link
     const downloadLink = createA(dataURL, '', '_blank');
     downloadLink.attribute('download', 'FATCAP_ART.png');
     downloadLink.style('display', 'none');
     downloadLink.parent(popup);
     
-    // Make the image clickable for direct download
-    img.mousePressed(() => {
-        downloadLink.elt.click();
-    });
+    // Add download button with dark styling
+    const downloadButton = createButton('Download Image');
+    downloadButton.style('font-family', "'Plus Jakarta Sans', sans-serif");
+    downloadButton.style('background-color', '#000000');
+    downloadButton.style('color', 'white');
+    downloadButton.style('border', '2px solid white');
+    downloadButton.style('border-radius', '30px');
+    downloadButton.style('padding', '12px 30px');
+    downloadButton.style('font-size', '16px');
+    downloadButton.style('font-weight', 'bold');
+    downloadButton.style('cursor', 'pointer');
+    downloadButton.parent(buttonContainer);
     
-    // Also allow for touch
-    img.elt.addEventListener('touchend', (e) => {
-      e.stopPropagation(); // Prevent popup from closing
-      // Try to trigger download link click on touch
+    // Handle download button click
+    downloadButton.mousePressed(() => {
       downloadLink.elt.click();
     });
     
-    // Remove the instructions text
+    // Make sure touch works for download button
+    downloadButton.elt.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      downloadLink.elt.click();
+    }, {passive: false});
     
     // Add a Cancel button
     const cancelBtn = createButton('Cancel');
@@ -2600,8 +2589,7 @@ function simpleScreenshot() {
     cancelBtn.style('padding', '12px 30px');
     cancelBtn.style('font-size', '16px');
     cancelBtn.style('cursor', 'pointer');
-    cancelBtn.style('display', 'block');
-    cancelBtn.parent(popup);
+    cancelBtn.parent(buttonContainer);
     
     // Close when Cancel button is clicked
     cancelBtn.mousePressed(() => {
@@ -2639,7 +2627,7 @@ function simpleScreenshot() {
           // Only show credit link if in start screen
           if (creditLink && startScreen) creditLink.style('display', 'block');
         }, 300);
-      });
+      }, {passive: false});
     }
     
     // Close popup when clicking outside the image (on the background)
