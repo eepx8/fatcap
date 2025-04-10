@@ -2533,45 +2533,47 @@ function simpleScreenshot() {
       // Create a direct download button specifically for iOS
       const iosDownloadBtn = createButton('Download Image');
       iosDownloadBtn.style('font-family', "'Plus Jakarta Sans', sans-serif");
-      iosDownloadBtn.style('background-color', '#0066cc');
+      iosDownloadBtn.style('background-color', '#000000');
       iosDownloadBtn.style('color', 'white');
-      iosDownloadBtn.style('border', 'none');
+      iosDownloadBtn.style('border', '2px solid white');
       iosDownloadBtn.style('border-radius', '30px');
-      iosDownloadBtn.style('padding', '12px 24px');
+      iosDownloadBtn.style('padding', '12px 30px');
       iosDownloadBtn.style('font-size', '16px');
-      iosDownloadBtn.style('margin', '10px auto');
+      iosDownloadBtn.style('cursor', 'pointer');
       iosDownloadBtn.style('display', 'block');
+      iosDownloadBtn.style('margin', '10px auto 20px auto'); // Add more space after button
       iosDownloadBtn.parent(popup);
      
       // On iOS, when button is clicked, show image in a new tab
       iosDownloadBtn.mousePressed(() => {
+        console.log("iOS Download button clicked");
         window.open(dataURL, '_blank');
-    });
-    
-      // Add touch support for iOS button
-      if (iosDownloadBtn.elt) {
-        iosDownloadBtn.elt.addEventListener('touchend', (e) => {
-        e.preventDefault();
-          e.stopPropagation();
-          window.open(dataURL, '_blank');
       });
-    }
     
-      // Add instructions specifically for iOS
-      const iOSInstructions = createP('For iOS: Tap the Download button above or press and hold on the image in the new tab');
-      iOSInstructions.style('color', 'white');
-      iOSInstructions.style('text-align', 'center');
-      iOSInstructions.style('font-family', "'Plus Jakarta Sans', sans-serif");
-      iOSInstructions.style('font-size', '12px');
-      iOSInstructions.style('padding', '0 20px');
-      iOSInstructions.style('margin-top', '0');
-      iOSInstructions.parent(popup);
+      // Enhanced touch support for iOS button to ensure it works reliably
+      iosDownloadBtn.elt.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        console.log("iOS Download touchstart");
+      }, {passive: false});
+      
+      iosDownloadBtn.elt.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log("iOS Download touchend, opening image");
+        
+        // Small delay to ensure event completes before opening window
+        setTimeout(function() {
+          window.open(dataURL, '_blank');
+        }, 10);
+      }, {passive: false});
+      
+      // Remove the iOS instructions text while keeping the button
     }
     
     // Create a direct download link as an alternative
     const downloadLink = createA(dataURL, '', '_blank');
     downloadLink.attribute('download', 'FATCAP_ART.png');
-        downloadLink.style('display', 'none');
+    downloadLink.style('display', 'none');
     downloadLink.parent(popup);
     
     // Make the image clickable for direct download
@@ -2582,18 +2584,11 @@ function simpleScreenshot() {
     // Also allow for touch
     img.elt.addEventListener('touchend', (e) => {
       e.stopPropagation(); // Prevent popup from closing
-      // No preventDefault to allow long-press save on iOS
+      // Try to trigger download link click on touch
+      downloadLink.elt.click();
     });
     
-    // Create instruction text
-    const instructions = createP('Press and hold image to save or tap to download');
-    instructions.style('color', 'white');
-    instructions.style('text-align', 'center');
-    instructions.style('font-family', "'Plus Jakarta Sans', sans-serif");
-    instructions.style('margin-top', '10px');
-    instructions.style('margin-bottom', '20px'); // Add space before cancel button
-    instructions.style('padding', '0 20px');
-    instructions.parent(popup);
+    // Remove the instructions text
     
     // Add a Cancel button
     const cancelBtn = createButton('Cancel');
